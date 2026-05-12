@@ -40,6 +40,23 @@ function AccordionItem({
   );
 }
 
+/** When color+size is required but one dimension is unset, match listing cards: first API color × its first size row. */
+function getDefaultColorSizeUnitPrice(product: Product, selectedColor: string): number {
+  const { colors, colorSizeMaps, price } = product;
+  const resolvedColor =
+    selectedColor && colors?.some((c) => c.name === selectedColor)
+      ? selectedColor
+      : colors?.[0]?.name ?? "";
+  if (!resolvedColor || !colorSizeMaps?.[resolvedColor]) return price;
+  const m = colorSizeMaps[resolvedColor];
+  const firstKey = m.sizes[0];
+  if (!firstKey) return price;
+  const unit =
+    m.sizeToPrice[firstKey] ??
+    (m.sizeToPrice ? lookupPriceForSize(m.sizeToPrice, firstKey) : undefined);
+  return typeof unit === "number" && unit > 0 ? unit : price;
+}
+
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg
@@ -100,13 +117,6 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     (hasColors ? colors?.find((c) => c.name === selectedColor) : undefined) ??
     (hasColors ? colors?.[0] : undefined);
 
-  const colorPrices = (colors ?? [])
-    .map((c) => c.price)
-    .filter((n): n is number => typeof n === "number" && Number.isFinite(n) && n > 0);
-  const minColorPrice = colorPrices.length ? Math.min(...colorPrices) : 0;
-  const maxColorPrice = colorPrices.length ? Math.max(...colorPrices) : 0;
-  const hasColorRange = minColorPrice > 0 && maxColorPrice > 0 && minColorPrice !== maxColorPrice;
-
   const scopedSizes = isColorAndSize
     ? (selectedColor && colorSizeMaps?.[selectedColor]?.sizes?.length
         ? colorSizeMaps[selectedColor]!.sizes
@@ -115,7 +125,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   const selectedUnitPrice = isColorAndSize
     ? (() => {
-        if (!selectedColor || !selectedSize) return product.price;
+        if (!selectedColor || !selectedSize) {
+          return getDefaultColorSizeUnitPrice(product, selectedColor);
+        }
         const key = selectedSize.toUpperCase();
         const m = colorSizeMaps?.[selectedColor];
         const p =
@@ -166,6 +178,13 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   const priceRange = getPriceRange(product);
   const hasVariantRange = priceRange.min !== priceRange.max;
+
+  /** Size-only products: true "FROM" across sizes. Color+size uses first color × first size, not global min. */
+  const showingFromPrice =
+    !isColorAndSize && !selectedSize && needsSize && hasVariantRange;
+
+  /** Matches headline when showing size "FROM"; otherwise follows selectedUnitPrice (incl. color+size default). */
+  const installmentBasePrice = showingFromPrice ? priceRange.min : selectedUnitPrice;
 
   function handleAddToCart() {
     const needsColor = hasColors;
@@ -262,19 +281,12 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       {/* Price */}
       <div className="mt-4 flex items-baseline gap-3 flex-wrap">
         <p className="text-2xl font-bold text-neutral-900">
-          {!selectedSize && needsSize && hasVariantRange ? (
+          {!isColorAndSize && !selectedSize && needsSize && hasVariantRange ? (
             <>
               <span className="text-sm font-semibold tracking-[0.2em] uppercase text-neutral-500 mr-2">
                 From
               </span>
               {formatMoney(priceRange.min)}
-            </>
-          ) : !needsSize && hasColors && !selectedColor && hasColorRange ? (
-            <>
-              <span className="text-sm font-semibold tracking-[0.2em] uppercase text-neutral-500 mr-2">
-                From
-              </span>
-              {formatMoney(minColorPrice)}
             </>
           ) : (
             formatMoney(selectedUnitPrice)
@@ -287,7 +299,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         ) : null}
       </div>
       <p className="mt-1 text-xs text-neutral-400">
-        Pay in 3 installments of {formatMoney(Math.round(selectedUnitPrice / 3))}
+        Pay in 3 installments of {formatMoney(Math.round(installmentBasePrice / 3))}
       </p>
       {typeof taxAmount === "number" && Number.isFinite(taxAmount) && taxAmount > 0 ? (
         <p className="mt-1 text-xs text-neutral-400">

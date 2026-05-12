@@ -360,13 +360,18 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
     }) ||
     minVariantBlockPrice;
 
+  // Only trust product-level actualPrice for compare-at. Do not use variant[0].actualPrice
+  // when multiple variant blocks exist — that is another color/SKU's list price and creates
+  // false "was" prices when the headline uses the minimum variant price (e.g. Red 45 vs green 450).
+  const variantBlocks = api.variant ?? [];
   const compareAtPrice =
     typeof api.actualPrice === "number" && Number.isFinite(api.actualPrice) && api.actualPrice > 0
       ? api.actualPrice
-      : typeof api.variant?.[0]?.actualPrice === "number" &&
-          Number.isFinite(api.variant?.[0]?.actualPrice) &&
-          (api.variant?.[0]?.actualPrice ?? 0) > 0
-        ? (api.variant?.[0]?.actualPrice as number)
+      : variantBlocks.length === 1 &&
+          typeof variantBlocks[0]?.actualPrice === "number" &&
+          Number.isFinite(variantBlocks[0]!.actualPrice) &&
+          (variantBlocks[0]!.actualPrice ?? 0) > 0
+        ? (variantBlocks[0]!.actualPrice as number)
         : undefined;
 
   const baseSku =

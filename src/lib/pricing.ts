@@ -6,7 +6,7 @@ export const PRICING = {
   currency: "PKR" as const,
   locale: "en-PK" as const,
   freeShippingThreshold: 5000,
-  shippingCost: 250,
+  shippingCost: 500,
 } as const;
 
 const moneyFormatter = new Intl.NumberFormat(PRICING.locale, {

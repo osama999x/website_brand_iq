@@ -24,7 +24,7 @@ function TwitterIcon() {
 
 import Link from "next/link";
 
-const shopLinks = ["Men", "Women", "Juniors", "New Arrivals", "Sale"];
+const shopLinks = ["Men", "Women", "Juniors", "New Arrivals"];
 const helpLinks = ["Track Order", "Returns & Exchanges", "Size Guide", "FAQs", "Contact Us", "Feedback"];
 const companyLinks = ["About Us", "Careers", "Press", "Store Locator", "Sustainability"];
 
@@ -33,7 +33,7 @@ const shopHref: Record<(typeof shopLinks)[number], string> = {
   Women: "/?gender=women",
   Juniors: "/?gender=juniors",
   "New Arrivals": "/products",
-  Sale: "/products",
+  // Sale: "/products",
 };
 
 const helpHref: Record<(typeof helpLinks)[number], string> = {

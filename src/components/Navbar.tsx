@@ -5,13 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCartStore, selectCartCount } from "../store/cartStore";
 
-const categories = ["MEN", "WOMEN", "JUNIORS", "SALE"] as const;
+const categories = ["MEN", "WOMEN", "JUNIORS"] as const;
 
 const genderHref: Record<(typeof categories)[number], string> = {
   MEN: "/?gender=men",
   WOMEN: "/?gender=women",
   JUNIORS: "/?gender=juniors",
-  SALE: "/products",
 };
 
 function SearchIcon() {
@@ -115,9 +114,7 @@ export default function Navbar() {
               <li key={cat}>
                 <Link
                   href={genderHref[cat]}
-                  className={`text-sm font-semibold tracking-widest transition-colors hover:text-neutral-500 ${
-                    cat === "SALE" ? "text-red-600 hover:text-red-400" : "text-neutral-900"
-                  }`}
+                  className="text-sm font-semibold tracking-widest transition-colors hover:text-neutral-500 text-neutral-900"
                 >
                   {cat}
                 </Link>
@@ -199,9 +196,7 @@ export default function Navbar() {
                 <li key={cat}>
                   <Link
                     href={genderHref[cat]}
-                    className={`block px-2 py-3 text-sm font-semibold tracking-widest border-b border-neutral-100 last:border-0 transition-colors hover:bg-neutral-50 ${
-                      cat === "SALE" ? "text-red-600" : "text-neutral-900"
-                    }`}
+                    className="block px-2 py-3 text-sm font-semibold tracking-widest border-b border-neutral-100 last:border-0 transition-colors hover:bg-neutral-50 text-neutral-900"
                     onClick={() => setMenuOpen(false)}
                   >
                     {cat}

@@ -1,6 +1,7 @@
 "use client";
 
 import { CategoriesProvider } from "../context/CategoriesContext";
+import NavigationTransition from "./NavigationTransition";
 import type { ApiCategory } from "../types/api";
 
 /**
@@ -16,6 +17,7 @@ export default function Providers({
 }) {
   return (
     <CategoriesProvider initialCategories={initialCategories}>
+      <NavigationTransition />
       {children}
     </CategoriesProvider>
   );

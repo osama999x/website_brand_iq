@@ -25,3 +25,35 @@ body {
     transform: translateX(100%);
   }
 }
+
+/* Brief “page refresh” cue on in-app navigation (e.g. gender links on home) */
+@keyframes route-flash {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes route-progress {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+.animate-route-flash {
+  animation: route-flash 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-route-progress {
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: route-progress 380ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
