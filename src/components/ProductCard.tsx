@@ -3,8 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { Product } from "../data/products";
 import { formatMoney, getPriceRange } from "../lib/pricing";
+import { buildQuickAddCartLine } from "../lib/quickAddFromProduct";
+import { isMongoObjectId } from "../lib/productVariantMaps";
+import { getProductDetail } from "../services/homeService";
+import { mapApiProductDetailToProduct } from "../types/api";
 import { useCartStore } from "../store/cartStore";
 
 interface ProductCardProps {
@@ -15,44 +20,43 @@ const FALLBACK_IMAGE =
   "https://placehold.co/600x800/e2e8f0/64748b?text=Product";
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { name, fit, gender, price, image, isNew, slug, sizes } = product;
+  const { name, fit, gender, price, image, isNew, slug } = product;
   const priceRange = getPriceRange(product);
   const hasVariantRange = priceRange.min !== priceRange.max;
   const addToCart = useCartStore((s) => s.addToCart);
   const router = useRouter();
+  const [quickLoading, setQuickLoading] = useState(false);
   const imageSrc =
     image?.startsWith("http://") || image?.startsWith("https://")
       ? image
       : FALLBACK_IMAGE;
 
-  function handleQuickAdd(e: React.MouseEvent<HTMLButtonElement>) {
+  async function handleQuickAdd(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     e.stopPropagation();
+    if (quickLoading) return;
+    setQuickLoading(true);
+    try {
+      let resolved: Product = product;
+      if (isMongoObjectId(product.slug)) {
+        try {
+          const detail = await getProductDetail(product.slug);
+          resolved = mapApiProductDetailToProduct(detail);
+        } catch {
+          router.push(`/products/${product.slug}`);
+          return;
+        }
+      }
 
-    // If product has real sizes, quick-add the first one.
-    const firstSize = sizes?.[0];
-    if (firstSize) {
-      const key = String(firstSize).toUpperCase();
-      const variantPrice = product.sizeToPrice?.[key];
-      const variantSku = product.sizeToSku?.[key];
-      addToCart({
-        productId: product.id,
-        slug: product.slug,
-        name: product.name,
-        price: typeof variantPrice === "number" && Number.isFinite(variantPrice) ? variantPrice : product.price,
-        ...(typeof product.taxAmount === "number" && Number.isFinite(product.taxAmount) && product.taxAmount > 0
-          ? { taxAmount: product.taxAmount, ...(typeof product.isTaxable === "boolean" ? { isTaxable: product.isTaxable } : {}) }
-          : {}),
-        image: product.image,
-        size: firstSize,
-        ...(variantSku ? { sku: variantSku } : {}),
-      });
-      return;
+      const line = buildQuickAddCartLine(resolved);
+      if (!line) {
+        router.push(`/products/${product.slug}`);
+        return;
+      }
+      addToCart(line);
+    } finally {
+      setQuickLoading(false);
     }
-
-    // If there are no selectable options (or the listing lacks enough catalog data),
-    // route to PDP so the user can choose the correct variant.
-    router.push(`/products/${slug}`);
   }
 
   return (
@@ -101,10 +105,12 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Quick Add — outside Link so it doesn't navigate */}
       <div className="overflow-hidden mt-2">
         <button
-          className="w-full translate-y-0 opacity-100 sm:translate-y-full sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:group-focus-within:translate-y-0 sm:group-focus-within:opacity-100 transition-all duration-300 bg-neutral-900 text-white text-xs font-bold tracking-[0.2em] uppercase py-3.5 hover:bg-neutral-700 cursor-pointer"
+          type="button"
+          disabled={quickLoading}
+          className="w-full translate-y-0 opacity-100 sm:translate-y-full sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:group-focus-within:translate-y-0 sm:group-focus-within:opacity-100 transition-all duration-300 bg-neutral-900 text-white text-xs font-bold tracking-[0.2em] uppercase py-3.5 hover:bg-neutral-700 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
           onClick={handleQuickAdd}
         >
-          Quick Add
+          {quickLoading ? "Adding…" : "Quick Add"}
         </button>
       </div>
     </article>

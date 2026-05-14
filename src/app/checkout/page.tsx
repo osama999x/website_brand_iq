@@ -355,37 +355,47 @@ export default function CheckoutPage() {
                 <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-neutral-900 mb-4 pb-3 border-b border-neutral-200">
                   Payment Method
                 </h2>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {(
                     [
                       { key: "cod" as const, label: "Cash on Delivery", recommended: true },
                       { key: "easypaisa" as const, label: "Easy Paisa / Jazz Cash", recommended: false },
                       { key: "bank" as const, label: "Bank Transfer", recommended: false },
                     ] as const
-                  ).map(({ key, label, recommended }) => (
-                    <label
-                      key={key}
-                      className={`flex items-center gap-3 border px-4 py-3.5 cursor-pointer transition-colors ${
-                        paymentChoice === key
-                          ? "border-neutral-900 bg-neutral-50"
-                          : "border-neutral-200 hover:border-neutral-400"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        checked={paymentChoice === key}
-                        onChange={() => setPaymentChoice(key)}
-                        className="accent-neutral-900"
-                      />
-                      <span className="text-sm font-medium text-neutral-800">{label}</span>
-                      {recommended && (
-                        <span className="ml-auto text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 border border-green-200">
-                          Recommended
+                  ).map(({ key, label, recommended }) => {
+                    const inputId = `checkout-payment-${key}`;
+                    return (
+                      <label
+                        key={key}
+                        htmlFor={inputId}
+                        className={`flex w-full min-h-[52px] cursor-pointer touch-manipulation items-center gap-3 border px-4 py-3.5 transition-colors [-webkit-tap-highlight-color:transparent] ${
+                          paymentChoice === key
+                            ? "border-neutral-900 bg-neutral-50"
+                            : "border-neutral-200 hover:border-neutral-400 active:bg-neutral-50/80"
+                        }`}
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+                          <input
+                            id={inputId}
+                            type="radio"
+                            name="payment"
+                            value={key}
+                            checked={paymentChoice === key}
+                            onChange={() => setPaymentChoice(key)}
+                            className="h-5 w-5 cursor-pointer accent-neutral-900"
+                          />
                         </span>
-                      )}
-                    </label>
-                  ))}
+                        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="text-sm font-medium text-neutral-800">{label}</span>
+                          {recommended ? (
+                            <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 border border-green-200 whitespace-nowrap">
+                              Recommended
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
                 <p className="mt-3 text-xs text-neutral-400">
                   Secure payment. Your order details are safe with us.

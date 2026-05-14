@@ -123,7 +123,151 @@ export function lookupPriceForSize(
   return undefined;
 }
 
-function isMongoObjectId(s: string): boolean {
+/** Per-color size × SKU × price buckets (same rules as PDP mapper). */
+export type ColorSizeBucket = {
+  sizes: string[];
+  sizeToSku: Record<string, string>;
+  sizeToPrice: Record<string, number>;
+};
+
+export function buildColorSizeBucketsFromDetail(api: ApiProductDetail): Record<string, ColorSizeBucket> {
+  const colorSizeMaps: Record<string, ColorSizeBucket> = {};
+  for (const v of api.variant ?? []) {
+    const colorName = v?.colorName?.toString().trim();
+    if (!colorName) continue;
+    const bucket =
+      colorSizeMaps[colorName] ??
+      (colorSizeMaps[colorName] = {
+        sizes: [],
+        sizeToSku: {},
+        sizeToPrice: {},
+      });
+
+    const blockSku = typeof v?.sku === "string" && v.sku.trim() ? v.sku.trim() : undefined;
+
+    for (const s of v?.size ?? []) {
+      if (!s || typeof s !== "object") continue;
+      const row = s as Record<string, unknown>;
+      const label = pickLabel(row);
+      if (!label) continue;
+      const key = label.toUpperCase();
+      if (!bucket.sizes.includes(key)) bucket.sizes.push(key);
+
+      const rowSku = pickSku(row);
+      const skuStr = rowSku ?? blockSku;
+      if (skuStr) bucket.sizeToSku[key] = skuStr;
+
+      const unit = pickUnitPrice(row);
+      if (unit != null && unit > 0) bucket.sizeToPrice[key] = unit;
+    }
+  }
+  return colorSizeMaps;
+}
+
+function findBucketKeyInsensitive(
+  buckets: Record<string, ColorSizeBucket>,
+  color: string
+): string | undefined {
+  if (Object.prototype.hasOwnProperty.call(buckets, color)) return color;
+  const want = color.trim().toLowerCase();
+  for (const k of Object.keys(buckets)) {
+    if (k.trim().toLowerCase() === want) return k;
+  }
+  return undefined;
+}
+
+function variantBlockSkuForColor(detail: ApiProductDetail, color: string): string | undefined {
+  const want = color.trim().toLowerCase();
+  for (const v of detail.variant ?? []) {
+    const cn = v?.colorName?.toString().trim().toLowerCase();
+    if (cn !== want) continue;
+    const blockSku = typeof v?.sku === "string" && v.sku.trim() ? v.sku.trim() : undefined;
+    if (blockSku) return blockSku;
+    const first = v.size?.[0];
+    if (first && typeof first === "object") {
+      const sk = pickSku(first as Record<string, unknown>);
+      if (sk) return sk;
+    }
+  }
+  return undefined;
+}
+
+function variantUnitPriceForColor(detail: ApiProductDetail, color: string): number | undefined {
+  const want = color.trim().toLowerCase();
+  for (const v of detail.variant ?? []) {
+    const cn = v?.colorName?.toString().trim().toLowerCase();
+    if (cn !== want) continue;
+    const first = v.size?.[0];
+    if (first && typeof first === "object") {
+      const p = pickUnitPrice(first as Record<string, unknown>);
+      if (p != null && p > 0) return p;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Resolves catalog SKU + unit price from productDetail for a cart line.
+ * Supports plain size keys, combined `SIZE (COLOR)` lines, and `ONE SIZE (color)`.
+ */
+export function resolveSkuPriceFromDetail(
+  detail: ApiProductDetail,
+  item: Pick<CartItem, "size" | "sku" | "price">
+): { sku: string; price: number } | null {
+  const trimmedSku = item.sku?.trim();
+  if (trimmedSku) return { sku: trimmedSku, price: item.price };
+
+  const trimmedSize = item.size.trim();
+  const buckets = buildColorSizeBucketsFromDetail(detail);
+
+  const combo = /^(.+?)\s+\(([^)]+)\)\s*$/.exec(trimmedSize);
+  if (combo) {
+    const sizePart = combo[1]!.trim();
+    const colorPart = combo[2]!.trim();
+    const colorKey = findBucketKeyInsensitive(buckets, colorPart);
+    if (colorKey) {
+      const b = buckets[colorKey];
+      let sku = lookupSkuForSize(b.sizeToSku, sizePart);
+      if (!sku) sku = variantBlockSkuForColor(detail, colorPart);
+      const pr = lookupPriceForSize(b.sizeToPrice, sizePart);
+      if (sku) return { sku, price: pr ?? item.price };
+    }
+  }
+
+  const oneSize = /^ONE SIZE\s*\(([^)]+)\)\s*$/i.exec(trimmedSize);
+  if (oneSize) {
+    const colorPart = oneSize[1]!.trim();
+    const sku = variantBlockSkuForColor(detail, colorPart);
+    const pr = variantUnitPriceForColor(detail, colorPart);
+    if (sku) return { sku, price: pr ?? item.price };
+  }
+
+  if (trimmedSize === "ONE SIZE") {
+    const v0 = detail.variant?.[0];
+    const blockSku =
+      (typeof v0?.sku === "string" && v0.sku.trim() ? v0.sku.trim() : undefined) ??
+      (v0?.size?.[0] && typeof v0.size[0] === "object"
+        ? pickSku(v0.size[0] as Record<string, unknown>)
+        : undefined);
+    if (blockSku) {
+      const flat = buildVariantMapsFromDetail(detail);
+      const prices = Object.values(flat.sizeToPrice).filter((n) => n > 0);
+      const pr = prices.length ? Math.min(...prices) : item.price;
+      return { sku: blockSku, price: pr };
+    }
+  }
+
+  const flat = buildVariantMapsFromDetail(detail);
+  const sku = lookupSkuForSize(flat.sizeToSku, trimmedSize);
+  if (sku) {
+    const pr = lookupPriceForSize(flat.sizeToPrice, trimmedSize);
+    return { sku, price: pr ?? item.price };
+  }
+
+  return null;
+}
+
+export function isMongoObjectId(s: string): boolean {
   return /^[a-f0-9]{24}$/i.test(s);
 }
 
@@ -134,19 +278,18 @@ export async function resolveOrderProductLines(
   items: CartItem[],
   fetchDetail: (productId: string) => Promise<ApiProductDetail>
 ): Promise<{ ok: true; lines: OrderProductLine[] } | { ok: false; message: string }> {
-  const cache = new Map<string, ReturnType<typeof buildVariantMapsFromDetail>>();
+  const detailCache = new Map<string, ApiProductDetail | false>();
 
-  async function mapsFor(slug: string) {
-    if (cache.has(slug)) return cache.get(slug)!;
+  async function detailFor(slug: string): Promise<ApiProductDetail | false> {
+    const hit = detailCache.get(slug);
+    if (hit !== undefined) return hit;
     try {
-      const detail = await fetchDetail(slug);
-      const m = buildVariantMapsFromDetail(detail);
-      cache.set(slug, m);
-      return m;
+      const d = await fetchDetail(slug);
+      detailCache.set(slug, d);
+      return d;
     } catch {
-      const empty = { sizeToSku: {}, sizeToPrice: {} };
-      cache.set(slug, empty);
-      return empty;
+      detailCache.set(slug, false);
+      return false;
     }
   }
 
@@ -157,20 +300,23 @@ export async function resolveOrderProductLines(
     let price = item.price;
 
     if (isMongoObjectId(item.slug)) {
-      const { sizeToSku, sizeToPrice } = await mapsFor(item.slug);
-      if (!sku) {
-        sku = lookupSkuForSize(sizeToSku, item.size);
+      const detail = await detailFor(item.slug);
+      if (detail === false) {
+        return {
+          ok: false,
+          message: "Could not load product catalog for one or more items. Check your connection and try again.",
+        };
       }
-      const vp = lookupPriceForSize(sizeToPrice, item.size);
-      if (vp != null && vp > 0) price = vp;
-
-      if (!sku) {
+      const resolved = resolveSkuPriceFromDetail(detail, item);
+      if (!resolved) {
         return {
           ok: false,
           message:
             "Could not match this cart line to a catalog variant (SKU). Your productDetail response may not include sku per variant—check the Network tab—or ask the API to expose sku on each size/stock row.",
         };
       }
+      sku = resolved.sku;
+      price = resolved.price;
     } else if (!sku) {
       sku = `SKU-${item.size.replace(/\s+/g, "-").toUpperCase()}`;
     }
