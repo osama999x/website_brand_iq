@@ -21,7 +21,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           alt={`${productName} — view ${activeIndex + 1}`}
           fill
           priority
-          className="object-cover object-center transition-opacity duration-300"
+          className="product-media-image transition-opacity duration-300"
           sizes="(max-width: 1024px) 100vw, 50vw"
         />
       </div>
@@ -44,7 +44,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                 src={src}
                 alt={`${productName} thumbnail ${i + 1}`}
                 fill
-                className="object-cover object-center"
+                className="product-media-image"
                 sizes="15vw"
               />
             </button>

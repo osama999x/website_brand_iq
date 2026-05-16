@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Product } from "../data/products";
+import { resolveProductImageUrl } from "../lib/assets";
 import { formatMoney, getPriceRange } from "../lib/pricing";
 import { buildQuickAddCartLine } from "../lib/quickAddFromProduct";
 import { isMongoObjectId } from "../lib/productVariantMaps";
@@ -16,20 +17,14 @@ interface ProductCardProps {
   product: Product;
 }
 
-const FALLBACK_IMAGE =
-  "https://placehold.co/600x800/e2e8f0/64748b?text=Product";
-
 export default function ProductCard({ product }: ProductCardProps) {
-  const { name, fit, gender, price, image, isNew, slug } = product;
+  const { name, fit, gender, price, image, images, isNew, slug } = product;
   const priceRange = getPriceRange(product);
   const hasVariantRange = priceRange.min !== priceRange.max;
   const addToCart = useCartStore((s) => s.addToCart);
   const router = useRouter();
   const [quickLoading, setQuickLoading] = useState(false);
-  const imageSrc =
-    image?.startsWith("http://") || image?.startsWith("https://")
-      ? image
-      : FALLBACK_IMAGE;
+  const imageSrc = resolveProductImageUrl(image || images?.[0]);
 
   async function handleQuickAdd(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
@@ -69,7 +64,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             src={imageSrc}
             alt={name}
             fill
-            className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            className="product-media-image transition-transform duration-500 group-hover:scale-[1.02]"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
 

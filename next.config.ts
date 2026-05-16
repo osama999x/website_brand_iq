@@ -1,5 +1,26 @@
 import type { NextConfig } from "next";
 
+function assetRemotePattern():
+  | { protocol: "http" | "https"; hostname: string; port?: string; pathname: string }
+  | undefined {
+  const base = process.env.NEXT_PUBLIC_ASSET_BASE_URL;
+  if (!base) return undefined;
+  try {
+    const u = new URL(base);
+    const protocol = u.protocol.replace(":", "") as "http" | "https";
+    return {
+      protocol,
+      hostname: u.hostname,
+      ...(u.port ? { port: u.port } : {}),
+      pathname: "/**",
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+const assetPattern = assetRemotePattern();
+
 const nextConfig: NextConfig = {
   images: {
     // Avoid Next Image Optimizer SSRF restrictions for localhost/private IP assets
@@ -17,6 +38,7 @@ const nextConfig: NextConfig = {
         port: "3015",
         pathname: "/images/**",
       },
+      ...(assetPattern ? [assetPattern] : []),
     ],
   },
 };

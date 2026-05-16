@@ -20,6 +20,12 @@ body {
   padding: 0;
 }
 
+/* next/image fill: keep aspect ratio inside product frames */
+.product-media-image {
+  object-fit: contain;
+  object-position: center;
+}
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);

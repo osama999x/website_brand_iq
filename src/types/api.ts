@@ -7,6 +7,7 @@ export interface ApiProduct {
   _id: string;
   name: string;
   thumbnail?: string;
+  images?: string[];
   title?: string;
   actualPrice: number;
   discountedPrice?: number | null;
@@ -22,6 +23,7 @@ export interface ApiProduct {
   variant?: Array<{
     actualPrice?: number;
     discountedPrice?: number;
+    image?: string;
     size?: Array<{ size?: string; actualPrice?: number; discountedPrice?: number }>;
   }>;
   [key: string]: unknown;
@@ -167,6 +169,7 @@ export interface ApiWrapper<T> {
 
 /** Frontend Product type (from src/data/products) — imported for mapper return type */
 import type { Product } from "../data/products";
+import { pickListProductImageSource, resolveProductImageUrl } from "../lib/assets";
 import { buildVariantMapsFromDetail } from "../lib/productVariantMaps";
 
 function numericIdFromString(s: string): number {
@@ -177,29 +180,8 @@ function numericIdFromString(s: string): number {
   return Math.abs(n) % 2147483647;
 }
 
-const PLACEHOLDER_IMAGE =
-  "https://placehold.co/600x800/e2e8f0/64748b?text=Product";
-
-function getAssetBaseUrl(): string | null {
-  const base = process.env.NEXT_PUBLIC_ASSET_BASE_URL;
-  if (!base) return null;
-  return base.replace(/\/$/, "");
-}
-
 function ensureAbsoluteAssetUrl(value: string | undefined | null): string {
-  if (!value || typeof value !== "string") return PLACEHOLDER_IMAGE;
-  const trimmed = value.trim();
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-
-  // Backend sends relative paths like: images/1724...jpeg
-  if (trimmed.startsWith("images/")) {
-    const base = getAssetBaseUrl();
-    if (base) return `${base}/${trimmed}`;
-  }
-
-  return PLACEHOLDER_IMAGE;
+  return resolveProductImageUrl(value);
 }
 
 function pickEffectivePrice(input: {
@@ -221,7 +203,7 @@ function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"])
   const id = numericIdFromString(api._id);
   const slug = api._id.toString();
   const price = pickEffectivePrice({ discountedPrice: api.discountedPrice, actualPrice: api.actualPrice });
-  const image = ensureAbsoluteAssetUrl(api.thumbnail);
+  const image = ensureAbsoluteAssetUrl(pickListProductImageSource(api));
   const sizes: string[] =
     api.variant?.[0]?.size?.map((s) => s.size ?? "M").filter(Boolean) ??
     ["S", "M", "L", "XL"];
