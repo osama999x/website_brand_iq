@@ -25,6 +25,15 @@ export function normalizeAssetPath(value: string): string {
  * Turns API thumbnail paths into absolute URLs for next/image.
  * Listing + PDP should both use this (never gate on http/https only).
  */
+function isInlineImageDataUrl(value: string): boolean {
+  return /^data:image\/[a-z0-9+.-]+;base64,/i.test(value);
+}
+
+function isPathBasedAsset(value: string): boolean {
+  if (value.startsWith("http://") || value.startsWith("https://")) return true;
+  return normalizeAssetPath(value).startsWith("images/");
+}
+
 export function resolveProductImageUrl(value: string | undefined | null): string {
   if (!value || typeof value !== "string") return PLACEHOLDER_PRODUCT_IMAGE;
 
@@ -32,6 +41,11 @@ export function resolveProductImageUrl(value: string | undefined | null): string
   if (!trimmed) return PLACEHOLDER_PRODUCT_IMAGE;
 
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  // Home/list API often embeds thumbnail as base64; PDP may use images/ paths instead.
+  if (isInlineImageDataUrl(trimmed)) {
     return trimmed;
   }
 
@@ -50,17 +64,28 @@ export function pickListProductImageSource(api: {
   images?: unknown;
   variant?: Array<{ image?: string | null } | null> | null;
 }): string | undefined {
-  const fromImages = Array.isArray(api.images)
-    ? api.images.find((x) => typeof x === "string" && x.trim())
-    : undefined;
+  const candidates: string[] = [];
+
+  if (Array.isArray(api.images)) {
+    for (const x of api.images) {
+      if (typeof x === "string" && x.trim()) candidates.push(x.trim());
+    }
+  }
 
   const fromVariant = api.variant?.find(
     (v) => v && typeof v.image === "string" && v.image.trim()
   )?.image;
+  if (fromVariant?.trim()) candidates.push(fromVariant.trim());
 
-  const candidates = [api.thumbnail, fromImages, fromVariant].filter(
-    (x): x is string => typeof x === "string" && x.trim().length > 0
-  );
+  if (typeof api.thumbnail === "string" && api.thumbnail.trim()) {
+    candidates.push(api.thumbnail.trim());
+  }
+
+  if (candidates.length === 0) return undefined;
+
+  // Prefer CDN/path URLs over huge inline base64 when the API sends both.
+  const pathBased = candidates.find((c) => isPathBasedAsset(c));
+  if (pathBased) return pathBased;
 
   return candidates[0];
 }

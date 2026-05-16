@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import ProductMedia from "./ProductMedia";
 
 interface ProductGalleryProps {
   images: string[];
@@ -15,11 +15,10 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
     <div className="flex flex-col gap-3 lg:sticky lg:top-24">
       {/* Main image */}
       <div className="relative w-full aspect-[3/4] overflow-hidden bg-neutral-100">
-        <Image
+        <ProductMedia
           key={activeIndex}
           src={images[activeIndex]}
           alt={`${productName} — view ${activeIndex + 1}`}
-          fill
           priority
           className="product-media-image transition-opacity duration-300"
           sizes="(max-width: 1024px) 100vw, 50vw"
@@ -40,10 +39,9 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
                   : "ring-1 ring-neutral-200 hover:ring-neutral-400"
               }`}
             >
-              <Image
+              <ProductMedia
                 src={src}
                 alt={`${productName} thumbnail ${i + 1}`}
-                fill
                 className="product-media-image"
                 sizes="15vw"
               />

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import ProductMedia from "./ProductMedia";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Product } from "../data/products";
@@ -60,10 +60,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       <Link href={`/products/${slug}`} className="flex flex-col flex-1">
         {/* Image wrapper */}
         <div className="relative overflow-hidden bg-neutral-100 aspect-[3/4]">
-          <Image
+          <ProductMedia
             src={imageSrc}
             alt={name}
-            fill
             className="product-media-image transition-transform duration-500 group-hover:scale-[1.02]"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
