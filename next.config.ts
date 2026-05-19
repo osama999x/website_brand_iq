@@ -1,9 +1,18 @@
 import type { NextConfig } from "next";
+import { deriveAssetBaseFromApiUrl } from "./src/lib/assets";
+
+function resolveAssetBaseUrl(): string | undefined {
+  const explicit = process.env.NEXT_PUBLIC_ASSET_BASE_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+  const api = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (api) return deriveAssetBaseFromApiUrl(api) ?? undefined;
+  return undefined;
+}
 
 function assetRemotePattern():
   | { protocol: "http" | "https"; hostname: string; port?: string; pathname: string }
   | undefined {
-  const base = process.env.NEXT_PUBLIC_ASSET_BASE_URL;
+  const base = resolveAssetBaseUrl();
   if (!base) return undefined;
   try {
     const u = new URL(base);

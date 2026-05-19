@@ -364,8 +364,19 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
       ? api.variant[0].sku
       : undefined) ?? undefined;
 
-  const image = ensureAbsoluteAssetUrl(api.thumbnail);
-  const images = (api.images ?? [api.thumbnail ?? ""]).map((x) =>
+  const rawImages: string[] = [];
+  if (Array.isArray(api.images)) {
+    for (const x of api.images) {
+      if (typeof x === "string" && x.trim()) rawImages.push(x.trim());
+    }
+  }
+  const thumb =
+    typeof api.thumbnail === "string" && api.thumbnail.trim() ? api.thumbnail.trim() : "";
+  if (thumb && !rawImages.includes(thumb)) rawImages.unshift(thumb);
+  if (rawImages.length === 0 && thumb) rawImages.push(thumb);
+
+  const image = ensureAbsoluteAssetUrl(thumb || rawImages[0]);
+  const images = (rawImages.length ? rawImages : [thumb || ""]).map((x) =>
     ensureAbsoluteAssetUrl(x)
   );
 

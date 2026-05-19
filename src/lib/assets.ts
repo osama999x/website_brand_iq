@@ -1,10 +1,27 @@
 export const PLACEHOLDER_PRODUCT_IMAGE =
   "https://placehold.co/600x800/e2e8f0/64748b?text=Product";
 
+/** Strip `/api/v1/home`, `/api/v1`, or trailing `/home` from an API base URL. */
+export function deriveAssetBaseFromApiUrl(apiBaseUrl: string): string | null {
+  try {
+    const u = new URL(apiBaseUrl.trim());
+    let path = u.pathname.replace(/\/$/, "");
+    path = path.replace(/\/api\/v\d+(\/home)?$/i, "").replace(/\/home$/i, "");
+    const origin = u.origin;
+    return path ? `${origin}${path}`.replace(/\/$/, "") : origin;
+  } catch {
+    return null;
+  }
+}
+
 export function getAssetBaseUrl(): string | null {
-  const base = process.env.NEXT_PUBLIC_ASSET_BASE_URL;
-  if (!base) return null;
-  return base.replace(/\/$/, "");
+  const explicit = process.env.NEXT_PUBLIC_ASSET_BASE_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, "");
+
+  const api = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (api) return deriveAssetBaseFromApiUrl(api);
+
+  return null;
 }
 
 /** Normalize backend paths (`images/…`, `/images/…`, full URL with embedded path). */

@@ -1,0 +1,70 @@
+{
+    "msg":  "Product Detail",
+    "data":  {
+                 "_id":  "6a083f17d39be4821ae31ef1",
+                 "category":  {
+                                  "_id":  "69ff2663ee6ce3845ab649fa",
+                                  "name":  "MAN",
+                                  "icon":  "images/1778574942096.jpeg",
+                                  "thumbnail":  "images/1778574942098.jpeg",
+                                  "gender":  "men"
+                              },
+                 "subcategory":  {
+                                     "_id":  "69ff268bee6ce3845ab64a04",
+                                     "name":  "Jeans",
+                                     "icon":  "images/1778575384721.png",
+                                     "thumbnail":  null
+                                 },
+                 "name":  "kikdfikd",
+                 "title":  "jfjd",
+                 "description":  "klnlknlikn",
+                 "longDescription":  "nikniknik",
+                 "sizeGuide":  "niiknpomnpo",
+                 "sizeFit":  "ojopjmpo",
+                 "deliveryReturns":  "ninini",
+                 "variant":  [
+                                 {
+                                     "colorName":  "Red",
+                                     "colorHex":  "#df2a2a",
+                                     "actualPrice":  500,
+                                     "discountedPrice":  300,
+                                     "quantity":  5,
+                                     "sku":  "gfvhbjnkml45",
+                                     "size":  [
+
+                                              ],
+                                     "image":  "",
+                                     "isDiscount":  false,
+                                     "_id":  "6a0ace04f35ce229c9913ff7"
+                                 }
+                             ],
+                 "thumbnail":  "images/1779090094105.jpeg",
+                 "images":  [
+                                "images/1779090094105.jpeg",
+                                "images/1779089442003.jpeg",
+                                "images/1779092966854-319b4bde.jpeg",
+                                "images/1779092966855-99c8d988.jpeg",
+                                "images/1779092996652-b8c341c6.jpeg"
+                            ],
+                 "vendor":  "iii",
+                 "isFeatured":  true,
+                 "isSale":  false,
+                 "isDeal":  false,
+                 "discount":  0,
+                 "inStock":  true,
+                 "ratingCount":  0,
+                 "isFavourite":  false,
+                 "isTaxable":  true,
+                 "isPercentage":  false,
+                 "taxAmount":  5,
+                 "metaData":  "kll",
+                 "metaDescription":  "nmdkjd",
+                 "tags":  "nnn",
+                 "addons":  [
+
+                            ],
+                 "averageRating":  0,
+                 "promotionPrice":  null,
+                 "promotionDiscount":  null
+             }
+}
