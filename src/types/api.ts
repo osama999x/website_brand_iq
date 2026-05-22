@@ -16,6 +16,7 @@ export interface ApiProduct {
   dealPrice?: number;
   isFeatured?: boolean;
   isDiscount?: boolean;
+  isSale?: boolean;
   isDeal?: boolean;
   discount?: number;
   category?: string;
@@ -50,12 +51,16 @@ export interface ApiProductDetail {
   discountedPrice?: number | null;
   promotionPrice?: number | null;
   promotionDiscount?: number | null;
+  isSale?: boolean;
+  discount?: number;
+  isDiscount?: boolean;
   variant?: Array<{
     colorName?: string;
     colorHex?: string;
     sku?: string;
     actualPrice?: number;
     discountedPrice?: number | null;
+    isDiscount?: boolean;
     size?: Array<{
       name?: string;
       /** Some APIs use `size` instead of `name` for the label */
@@ -64,6 +69,7 @@ export interface ApiProductDetail {
       sku?: string;
       actualPrice?: number;
       discountedPrice?: number;
+      isDiscount?: boolean;
       quantity?: number;
     }>;
   }>;
@@ -171,6 +177,11 @@ export interface ApiWrapper<T> {
 import type { Product } from "../data/products";
 import { pickListProductImageSource, resolveProductImageUrl } from "../lib/assets";
 import { buildVariantMapsFromDetail } from "../lib/productVariantMaps";
+import {
+  pickCompareAtPrice,
+  pickEffectivePrice,
+  type PriceFields,
+} from "../lib/pricing";
 
 function numericIdFromString(s: string): number {
   let n = 0;
@@ -184,15 +195,31 @@ function ensureAbsoluteAssetUrl(value: string | undefined | null): string {
   return resolveProductImageUrl(value);
 }
 
-function pickEffectivePrice(input: {
-  discountedPrice?: number | null;
-  actualPrice?: number | null;
-}): number {
-  const d = input.discountedPrice;
-  if (typeof d === "number" && Number.isFinite(d) && d > 0) return d;
-  const a = input.actualPrice;
-  if (typeof a === "number" && Number.isFinite(a) && a > 0) return a;
-  return 0;
+function productSaleContext(api: ApiProductDetail | ApiProduct): PriceFields {
+  return {
+    isSale: api.isSale === true,
+    discount: typeof api.discount === "number" ? api.discount : undefined,
+    isDiscount: typeof api.isDiscount === "boolean" ? api.isDiscount : undefined,
+  };
+}
+
+function variantPriceFields(
+  api: ApiProductDetail | ApiProduct,
+  row: {
+    actualPrice?: number | null;
+    discountedPrice?: number | null;
+    isDiscount?: boolean;
+  }
+): PriceFields {
+  const sale = productSaleContext(api);
+  return {
+    actualPrice: row.actualPrice,
+    discountedPrice: row.discountedPrice,
+    isSale: sale.isSale,
+    discount: sale.discount,
+    isDiscount:
+      typeof row.isDiscount === "boolean" ? row.isDiscount : sale.isDiscount,
+  };
 }
 
 /**
@@ -202,7 +229,7 @@ function pickEffectivePrice(input: {
 function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"]): Product {
   const id = numericIdFromString(api._id);
   const slug = api._id.toString();
-  const price = pickEffectivePrice({ discountedPrice: api.discountedPrice, actualPrice: api.actualPrice });
+  const price = pickEffectivePrice(variantPriceFields(api, api));
   const image = ensureAbsoluteAssetUrl(pickListProductImageSource(api));
   const sizes: string[] =
     api.variant?.[0]?.size?.map((s) => s.size ?? "M").filter(Boolean) ??
@@ -235,12 +262,7 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
   const { sizeToSku, sizeToPrice } = buildVariantMapsFromDetail(api);
 
   const variantBlockPrices = (api.variant ?? [])
-    .map((v) =>
-      pickEffectivePrice({
-        discountedPrice: v?.discountedPrice ?? null,
-        actualPrice: v?.actualPrice ?? null,
-      })
-    )
+    .map((v) => pickEffectivePrice(variantPriceFields(api, v ?? {})))
     .filter((n) => typeof n === "number" && Number.isFinite(n) && n > 0);
   const minVariantBlockPrice =
     variantBlockPrices.length > 0 ? Math.min(...variantBlockPrices) : 0;
@@ -257,10 +279,8 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
       const label = (s?.name ?? s?.size)?.toString().trim();
       if (!label) continue;
       const key = label.toUpperCase();
-      const actual = s?.actualPrice;
-      if (typeof actual === "number" && Number.isFinite(actual) && actual > 0) {
-        sizeToCompareAtPrice[key] = actual;
-      }
+      const compare = pickCompareAtPrice(variantPriceFields(api, s));
+      if (compare != null) sizeToCompareAtPrice[key] = compare;
     }
   }
 
@@ -287,16 +307,12 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
       const skuStr = typeof sku === "string" && sku.trim() ? sku.trim() : v?.sku;
       if (skuStr) bucket.sizeToSku[key] = skuStr;
 
-      const unit = pickEffectivePrice({
-        discountedPrice: (s as { discountedPrice?: unknown }).discountedPrice as number | null | undefined,
-        actualPrice: (s as { actualPrice?: unknown }).actualPrice as number | null | undefined,
-      });
+      const sizeFields = variantPriceFields(api, s);
+      const unit = pickEffectivePrice(sizeFields);
       if (unit > 0) bucket.sizeToPrice[key] = unit;
 
-      const actual = (s as { actualPrice?: unknown })?.actualPrice;
-      if (typeof actual === "number" && Number.isFinite(actual) && actual > 0) {
-        bucket.sizeToCompareAtPrice[key] = actual;
-      }
+      const compare = pickCompareAtPrice(sizeFields);
+      if (compare != null) bucket.sizeToCompareAtPrice[key] = compare;
     }
   }
 
@@ -314,20 +330,15 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
       .map((v) => {
         const name = v?.colorName?.toString().trim();
         if (!name) return null;
-        const unit = pickEffectivePrice({
-          discountedPrice: v?.discountedPrice ?? null,
-          actualPrice: v?.actualPrice ?? null,
-        });
-        const compare =
-          typeof v?.actualPrice === "number" && Number.isFinite(v.actualPrice) && v.actualPrice > 0
-            ? v.actualPrice
-            : undefined;
+        const fields = variantPriceFields(api, v);
+        const unit = pickEffectivePrice(fields);
+        const compare = pickCompareAtPrice(fields);
         return {
           name,
           hex: v?.colorHex,
           sku: v?.sku,
           ...(unit > 0 ? { price: unit } : {}),
-          ...(compare && unit > 0 && compare > unit ? { compareAtPrice: compare } : {}),
+          ...(compare != null && unit > 0 && compare > unit ? { compareAtPrice: compare } : {}),
         };
       })
       .filter(Boolean) as NonNullable<Product["colors"]>;
@@ -335,26 +346,15 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
   const firstVariantSize =
     (api.variant ?? []).flatMap((v) => v?.size ?? [])[0] ?? undefined;
   const computedPrice =
-    pickEffectivePrice({ discountedPrice: api.discountedPrice, actualPrice: api.actualPrice }) ||
-    pickEffectivePrice({
-      discountedPrice: firstVariantSize?.discountedPrice,
-      actualPrice: firstVariantSize?.actualPrice,
-    }) ||
+    pickEffectivePrice(variantPriceFields(api, api)) ||
+    pickEffectivePrice(variantPriceFields(api, firstVariantSize ?? {})) ||
     minVariantBlockPrice;
 
-  // Only trust product-level actualPrice for compare-at. Do not use variant[0].actualPrice
-  // when multiple variant blocks exist — that is another color/SKU's list price and creates
-  // false "was" prices when the headline uses the minimum variant price (e.g. Red 45 vs green 450).
   const variantBlocks = api.variant ?? [];
-  const compareAtPrice =
-    typeof api.actualPrice === "number" && Number.isFinite(api.actualPrice) && api.actualPrice > 0
-      ? api.actualPrice
-      : variantBlocks.length === 1 &&
-          typeof variantBlocks[0]?.actualPrice === "number" &&
-          Number.isFinite(variantBlocks[0]!.actualPrice) &&
-          (variantBlocks[0]!.actualPrice ?? 0) > 0
-        ? (variantBlocks[0]!.actualPrice as number)
-        : undefined;
+  const productCompare = pickCompareAtPrice(variantPriceFields(api, api));
+  const singleVariantCompare =
+    variantBlocks.length === 1 ? pickCompareAtPrice(variantPriceFields(api, variantBlocks[0]!)) : undefined;
+  const compareAtPrice = productCompare ?? singleVariantCompare;
 
   const baseSku =
     (api.variant?.length === 1 &&

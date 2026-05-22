@@ -20,6 +20,52 @@ export function formatMoney(amount: number): string {
   return moneyFormatter.format(safe);
 }
 
+export type PriceFields = {
+  discountedPrice?: number | null;
+  actualPrice?: number | null;
+  isDiscount?: boolean;
+  isSale?: boolean;
+  discount?: number;
+};
+
+/** Use discounted price only when the API marks an active sale/discount. */
+export function shouldUseDiscountedPrice(input: PriceFields): boolean {
+  if (input.isSale === true) return true;
+  if (typeof input.discount === "number" && Number.isFinite(input.discount) && input.discount > 0) {
+    return true;
+  }
+  if (input.isDiscount === false) return false;
+  if (input.isDiscount !== true) return false;
+
+  const d = input.discountedPrice;
+  const a = input.actualPrice;
+  return (
+    typeof d === "number" &&
+    Number.isFinite(d) &&
+    d > 0 &&
+    typeof a === "number" &&
+    Number.isFinite(a) &&
+    a > d
+  );
+}
+
+export function pickEffectivePrice(input: PriceFields): number {
+  const a = input.actualPrice;
+  if (shouldUseDiscountedPrice(input)) {
+    const d = input.discountedPrice;
+    if (typeof d === "number" && Number.isFinite(d) && d > 0) return d;
+  }
+  if (typeof a === "number" && Number.isFinite(a) && a > 0) return a;
+  return 0;
+}
+
+export function pickCompareAtPrice(input: PriceFields): number | undefined {
+  if (!shouldUseDiscountedPrice(input)) return undefined;
+  const a = input.actualPrice;
+  if (typeof a === "number" && Number.isFinite(a) && a > 0) return a;
+  return undefined;
+}
+
 export function getUnitPrice(product: Product, selectedSize?: string): number {
   if (!selectedSize) return product.price;
   const sizeKey = selectedSize.toUpperCase();

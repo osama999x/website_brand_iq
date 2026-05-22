@@ -183,9 +183,6 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   const showingFromPrice =
     !isColorAndSize && !selectedSize && needsSize && hasVariantRange;
 
-  /** Matches headline when showing size "FROM"; otherwise follows selectedUnitPrice (incl. color+size default). */
-  const installmentBasePrice = showingFromPrice ? priceRange.min : selectedUnitPrice;
-
   function handleAddToCart() {
     const needsColor = hasColors;
 
@@ -298,9 +295,6 @@ export default function ProductInfo({ product }: ProductInfoProps) {
           </p>
         ) : null}
       </div>
-      <p className="mt-1 text-xs text-neutral-400">
-        Pay in 3 installments of {formatMoney(Math.round(installmentBasePrice / 3))}
-      </p>
       {typeof taxAmount === "number" && Number.isFinite(taxAmount) && taxAmount > 0 ? (
         <p className="mt-1 text-xs text-neutral-400">
           Tax: {formatMoney(taxAmount)} {isTaxable === false ? "(not applied)" : "per item"}

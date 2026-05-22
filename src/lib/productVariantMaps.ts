@@ -1,6 +1,7 @@
 import type { ApiProductDetail } from "../types/api";
 import type { CartItem } from "../store/cartStore";
 import type { OrderProductLine } from "../types/order";
+import { pickEffectivePrice, type PriceFields } from "./pricing";
 
 function pickSku(row: Record<string, unknown>): string | undefined {
   const v =
@@ -21,12 +22,16 @@ function pickLabel(row: Record<string, unknown>): string | undefined {
   return s || undefined;
 }
 
-function pickUnitPrice(row: Record<string, unknown>): number | undefined {
-  const discounted = row.discountedPrice;
-  const actual = row.actualPrice;
-  // Prefer discountedPrice only when it's a positive number; otherwise fall back to actualPrice.
-  if (typeof discounted === "number" && Number.isFinite(discounted) && discounted > 0) return discounted;
-  if (typeof actual === "number" && Number.isFinite(actual) && actual > 0) return actual;
+function pickUnitPrice(row: Record<string, unknown>, sale?: PriceFields): number | undefined {
+  const fields: PriceFields = {
+    actualPrice: row.actualPrice as number | undefined,
+    discountedPrice: row.discountedPrice as number | null | undefined,
+    isDiscount: typeof row.isDiscount === "boolean" ? row.isDiscount : sale?.isDiscount,
+    isSale: sale?.isSale,
+    discount: sale?.discount,
+  };
+  const fromPriceFields = pickEffectivePrice(fields);
+  if (fromPriceFields > 0) return fromPriceFields;
 
   const v = row.price ?? row.salePrice;
   if (typeof v === "number" && !Number.isNaN(v) && v > 0) return v;
@@ -47,6 +52,11 @@ export function buildVariantMapsFromDetail(api: ApiProductDetail): {
 } {
   const sizeToSku: Record<string, string> = {};
   const sizeToPrice: Record<string, number> = {};
+  const sale: PriceFields = {
+    isSale: api.isSale === true,
+    discount: typeof api.discount === "number" ? api.discount : undefined,
+    isDiscount: typeof api.isDiscount === "boolean" ? api.isDiscount : undefined,
+  };
 
   function setRow(labelRaw: string | undefined, sku: string | undefined, unit: number | undefined) {
     if (!labelRaw) return;
@@ -56,26 +66,31 @@ export function buildVariantMapsFromDetail(api: ApiProductDetail): {
     if (unit != null && unit > 0) sizeToPrice[key] = unit;
   }
 
-  function ingestSizeRow(row: unknown) {
+  function ingestSizeRow(row: unknown, variantSale?: PriceFields) {
     if (!row || typeof row !== "object") return;
     const r = row as Record<string, unknown>;
     const label = pickLabel(r);
     const sku = pickSku(r);
-    const unit = pickUnitPrice(r);
+    const unit = pickUnitPrice(r, variantSale ?? sale);
     setRow(label, sku, unit);
   }
 
-  function ingestSizeArray(arr: unknown) {
+  function ingestSizeArray(arr: unknown, variantSale?: PriceFields) {
     if (!Array.isArray(arr)) return;
-    for (const row of arr) ingestSizeRow(row);
+    for (const row of arr) ingestSizeRow(row, variantSale);
   }
 
   // variant[] → each block may use `size` or `sizes`
   for (const block of api.variant ?? []) {
     if (!block || typeof block !== "object") continue;
     const b = block as Record<string, unknown>;
-    ingestSizeArray(b.size);
-    ingestSizeArray(b.sizes);
+    const variantSale: PriceFields = {
+      ...sale,
+      isDiscount:
+        typeof b.isDiscount === "boolean" ? b.isDiscount : sale.isDiscount,
+    };
+    ingestSizeArray(b.size, variantSale);
+    ingestSizeArray(b.sizes, variantSale);
   }
 
   // Root-level arrays sometimes used for stock / SKU lines
