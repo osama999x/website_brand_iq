@@ -19,7 +19,7 @@ export function formatMoney(amount: number): string {
   const safe = Number.isFinite(amount) ? amount : 0;
   return moneyFormatter.format(safe);
 }
-
+//
 export type PriceFields = {
   discountedPrice?: number | null;
   actualPrice?: number | null;
