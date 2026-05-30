@@ -12,17 +12,27 @@ interface ProductMediaProps {
  * Renders product photos from CDN paths or inline base64 (home/list API thumbnails).
  * Uses a native img for data: URLs — next/image is unreliable with large base64 payloads.
  */
+const FIT_CLASS = "object-contain object-center";
+
 export default function ProductMedia({
   src,
   alt,
   sizes = "(max-width: 640px) 100vw, 25vw",
   priority = false,
-  className = "product-media-image",
+  className = "",
 }: ProductMediaProps) {
+  const layoutClass = "absolute inset-0 h-full w-full";
+  const mergedClass = [layoutClass, FIT_CLASS, className].filter(Boolean).join(" ");
+
   if (src.startsWith("data:image/")) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={alt} className={`absolute inset-0 h-full w-full ${className}`} />
+      <img
+        src={src}
+        alt={alt}
+        className={mergedClass}
+        style={{ objectFit: "contain", objectPosition: "center" }}
+      />
     );
   }
 
@@ -33,7 +43,8 @@ export default function ProductMedia({
       fill
       priority={priority}
       sizes={sizes}
-      className={className}
+      className={mergedClass}
+      style={{ objectFit: "contain", objectPosition: "center" }}
     />
   );
 }

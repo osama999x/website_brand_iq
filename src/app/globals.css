@@ -20,9 +20,12 @@ body {
   padding: 0;
 }
 
-/* next/image fill: keep aspect ratio inside product frames */
+/* next/image fill: never stretch — letterbox inside the frame */
+img.product-media-image,
 .product-media-image {
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: contain !important;
   object-position: center;
 }
 

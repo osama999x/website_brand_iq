@@ -23,7 +23,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   return (
     <div className="flex flex-col gap-3 lg:sticky lg:top-24">
       {/* Main image */}
-      <div className="relative w-full aspect-[3/4] overflow-hidden bg-neutral-100">
+      <div className="relative w-full aspect-square max-h-[min(85vh,720px)] overflow-hidden bg-neutral-100">
         <ProductMedia
           key={safeIndex}
           src={resolvedImages[safeIndex]}
@@ -42,7 +42,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               key={i}
               onClick={() => setActiveIndex(i)}
               aria-label={`View image ${i + 1}`}
-              className={`relative aspect-[3/4] overflow-hidden bg-neutral-100 cursor-pointer transition-all duration-200 ${
+              className={`relative aspect-square overflow-hidden bg-neutral-100 cursor-pointer transition-all duration-200 ${
                 i === safeIndex
                   ? "ring-2 ring-neutral-900 ring-offset-1"
                   : "ring-1 ring-neutral-200 hover:ring-neutral-400"

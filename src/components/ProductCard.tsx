@@ -59,7 +59,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Linked image + info */}
       <Link href={`/products/${slug}`} className="flex flex-col flex-1">
         {/* Image wrapper */}
-        <div className="relative overflow-hidden bg-neutral-100 aspect-[3/4]">
+        <div className="relative overflow-hidden bg-neutral-100 aspect-square">
           <ProductMedia
             src={imageSrc}
             alt={name}
