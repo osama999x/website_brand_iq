@@ -6,6 +6,9 @@ import { getHome } from "../services/homeService";
 import { mapApiProductsToProducts } from "../types/api";
 import type { ApiHero } from "../types/api";
 
+/** Always refetch catalog — do not serve a cached home product grid with old prices. */
+export const dynamic = "force-dynamic";
+
 interface PageProps {
   searchParams?: Promise<{ gender?: string }>;
 }

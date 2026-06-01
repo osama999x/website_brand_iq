@@ -59,12 +59,12 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Linked image + info */}
       <Link href={`/products/${slug}`} className="flex flex-col flex-1">
         {/* Image wrapper */}
-        <div className="relative overflow-hidden bg-neutral-100 aspect-square">
+        <div className="product-media-frame relative aspect-[3/4] w-full">
           <ProductMedia
             src={imageSrc}
             alt={name}
-            className="product-media-image transition-transform duration-500 group-hover:scale-[1.02]"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            fit="cover"
+            className="transition-transform duration-500 group-hover:scale-[1.03]"
           />
 
           {/* NEW badge */}

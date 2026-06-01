@@ -6,6 +6,8 @@ import { getAllCategories, getHome } from "../services/homeService";
 import type { ApiCategory } from "../types/api";
 import type { ApiHero } from "../types/api";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "BrandIQ — Fashion for Everyone",
   description:

@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { apiClient } from "../lib/api";
 import type {
   ApiWrapper,
@@ -38,6 +39,7 @@ function buildListParams(params: ListParams = {}): Record<string, string | numbe
 
 /** GET /all — home screen data */
 export async function getHome(gender?: string, filters?: ListParams): Promise<HomeResponse> {
+  noStore();
   const res = await apiClient<ApiWrapper<HomeResponse>>("all", {
     params: {
       ...(gender ? { gender } : {}),
@@ -85,6 +87,7 @@ export async function getAllCategories(gender?: string): Promise<ApiCategory[]> 
 
 /** GET /productDetail */
 export async function getProductDetail(productId: string): Promise<ApiProductDetail> {
+  noStore();
   const res = await apiClient<ApiWrapper<ApiProductDetail>>("productDetail", {
     params: { productId },
   });

@@ -10,6 +10,8 @@ import { getProductDetail, getRelatedProductsMapped } from "../../../services/ho
 import type { Product } from "../../../data/products";
 import { mapApiProductDetailToProduct } from "../../../types/api";
 
+export const dynamic = "force-dynamic";
+
 /** Slug is a Mongo ObjectId when from API (24 hex chars) */
 const isMongoId = (s: string) => /^[a-f0-9]{24}$/i.test(s);
 

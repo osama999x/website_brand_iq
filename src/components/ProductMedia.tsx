@@ -1,50 +1,59 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { PLACEHOLDER_PRODUCT_IMAGE } from "../lib/assets";
+
+export type ProductMediaFit = "contain" | "cover";
 
 interface ProductMediaProps {
   src: string;
   alt: string;
-  sizes?: string;
+  /** `cover` = fills frame, no letterboxing; `contain` = full image with possible gaps */
+  fit?: ProductMediaFit;
   priority?: boolean;
   className?: string;
 }
 
 /**
- * Renders product photos from CDN paths or inline base64 (home/list API thumbnails).
- * Uses a native img for data: URLs — next/image is unreliable with large base64 payloads.
+ * Product photos via native img so object-fit is reliable (next/image fill often stretches).
  */
-const FIT_CLASS = "object-contain object-center";
-
 export default function ProductMedia({
   src,
   alt,
-  sizes = "(max-width: 640px) 100vw, 25vw",
+  fit = "cover",
   priority = false,
   className = "",
 }: ProductMediaProps) {
-  const layoutClass = "absolute inset-0 h-full w-full";
-  const mergedClass = [layoutClass, FIT_CLASS, className].filter(Boolean).join(" ");
+  const [currentSrc, setCurrentSrc] = useState(src);
 
-  if (src.startsWith("data:image/")) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={alt}
-        className={mergedClass}
-        style={{ objectFit: "contain", objectPosition: "center" }}
-      />
-    );
-  }
+  useEffect(() => {
+    setCurrentSrc(src);
+  }, [src]);
+
+  const objectFit = fit === "cover" ? "cover" : "contain";
 
   return (
-    <Image
-      src={src}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={currentSrc}
       alt={alt}
-      fill
-      priority={priority}
-      sizes={sizes}
-      className={mergedClass}
-      style={{ objectFit: "contain", objectPosition: "center" }}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      draggable={false}
+      className={`product-media-image product-media-image--${fit} ${className}`.trim()}
+      style={{
+        objectFit,
+        objectPosition: "center",
+        width: "100%",
+        height: "100%",
+        maxWidth: "100%",
+        maxHeight: "100%",
+      }}
+      onError={() => {
+        if (currentSrc !== PLACEHOLDER_PRODUCT_IMAGE) {
+          setCurrentSrc(PLACEHOLDER_PRODUCT_IMAGE);
+        }
+      }}
     />
   );
 }

@@ -1,3 +1,5 @@
+import { unstable_noStore as noStore } from "next/cache";
+
 const getBaseUrl = (): string => {
   const url = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!url || !url.trim()) {
@@ -14,11 +16,17 @@ export function getApiV1Root(): string {
   return getBaseUrl().replace(/\/home$/i, "");
 }
 
-export interface ApiClientOptions extends Omit<RequestInit, "body"> {
+export interface ApiClientOptions extends Omit<RequestInit, "body" | "cache"> {
   body?: Record<string, unknown> | unknown[];
   params?: Record<string, string | number | boolean | undefined>;
   /** If set, used instead of NEXT_PUBLIC_API_BASE_URL (path is appended to this base). */
   baseUrl?: string;
+  /**
+   * Next.js / fetch cache. Defaults to `no-store` so home/list prices match productDetail
+   * after portal updates (avoids stale Data Cache on `/`).
+   */
+  cache?: RequestCache;
+  next?: { revalidate?: number | false; tags?: string[] };
 }
 
 /**
@@ -29,7 +37,8 @@ export async function apiClient<T = unknown>(
   path: string,
   options: ApiClientOptions = {}
 ): Promise<T> {
-  const { params, body, baseUrl, ...init } = options;
+  noStore();
+  const { params, body, baseUrl, cache = "no-store", next, ...init } = options;
   const base = (baseUrl ?? getBaseUrl()).replace(/\/$/, "");
   const pathWithLeadingSlash = path.startsWith("/") ? path : `/${path}`;
   let url = `${base}${pathWithLeadingSlash}`;
@@ -47,12 +56,16 @@ export async function apiClient<T = unknown>(
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    Pragma: "no-cache",
     ...(init.headers as Record<string, string>),
   };
 
   const res = await fetch(url, {
     ...init,
     headers,
+    cache,
+    ...(next !== undefined ? { next } : {}),
     ...(body !== undefined && { body: JSON.stringify(body) }),
   });
 

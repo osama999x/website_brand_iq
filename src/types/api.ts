@@ -22,10 +22,19 @@ export interface ApiProduct {
   category?: string;
   subcategory?: string;
   variant?: Array<{
+    colorName?: string;
+    colorHex?: string;
+    sku?: string;
     actualPrice?: number;
-    discountedPrice?: number;
+    discountedPrice?: number | null;
+    isDiscount?: boolean;
     image?: string;
-    size?: Array<{ size?: string; actualPrice?: number; discountedPrice?: number }>;
+    size?: Array<{
+      size?: string;
+      actualPrice?: number;
+      discountedPrice?: number | null;
+      isDiscount?: boolean;
+    }>;
   }>;
   [key: string]: unknown;
 }
@@ -203,6 +212,49 @@ function productSaleContext(api: ApiProductDetail | ApiProduct): PriceFields {
   };
 }
 
+/** Same price rules on home, PLP, and PDP — variant rows beat stale product-level prices. */
+export function resolveCatalogProductPrice(api: ApiProductDetail | ApiProduct): number {
+  const variantBlocks = api.variant ?? [];
+  const variantPrices = variantBlocks
+    .map((v) => pickEffectivePrice(variantPriceFields(api, v ?? {})))
+    .filter((n) => n > 0);
+  const sizePrices = variantBlocks
+    .flatMap((v) => v?.size ?? [])
+    .map((s) => pickEffectivePrice(variantPriceFields(api, s)))
+    .filter((n) => n > 0);
+
+  if (variantBlocks.length > 0) {
+    const fromVariants = [...variantPrices, ...sizePrices];
+    if (fromVariants.length > 0) return Math.min(...fromVariants);
+  }
+
+  const fromRoot = pickEffectivePrice(variantPriceFields(api, api));
+  if (fromRoot > 0) return fromRoot;
+
+  if (variantPrices.length > 0) return Math.min(...variantPrices);
+  return 0;
+}
+
+function mapListProductColors(api: ApiProduct): Product["colors"] | undefined {
+  const colors = (api.variant ?? [])
+    .map((v) => {
+      const name = v?.colorName?.toString().trim();
+      if (!name) return null;
+      const fields = variantPriceFields(api, v);
+      const unit = pickEffectivePrice(fields);
+      const compare = pickCompareAtPrice(fields);
+      return {
+        name,
+        hex: v?.colorHex,
+        sku: v?.sku,
+        ...(unit > 0 ? { price: unit } : {}),
+        ...(compare != null && unit > 0 && compare > unit ? { compareAtPrice: compare } : {}),
+      };
+    })
+    .filter(Boolean) as NonNullable<Product["colors"]>;
+  return colors?.length ? colors : undefined;
+}
+
 function variantPriceFields(
   api: ApiProductDetail | ApiProduct,
   row: {
@@ -229,7 +281,8 @@ function variantPriceFields(
 function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"]): Product {
   const id = numericIdFromString(api._id);
   const slug = api._id.toString();
-  const price = pickEffectivePrice(variantPriceFields(api, api));
+  const price = resolveCatalogProductPrice(api);
+  const colors = mapListProductColors(api);
   const image = ensureAbsoluteAssetUrl(pickListProductImageSource(api));
   const sizes: string[] =
     api.variant?.[0]?.size?.map((s) => s.size ?? "M").filter(Boolean) ??
@@ -248,6 +301,7 @@ function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"])
     slug,
     description: (api.title as string) ?? api.name ?? "",
     sizes,
+    ...(colors?.length ? { colors } : {}),
   };
 }
 
@@ -260,12 +314,6 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
   const slug = api._id.toString();
 
   const { sizeToSku, sizeToPrice } = buildVariantMapsFromDetail(api);
-
-  const variantBlockPrices = (api.variant ?? [])
-    .map((v) => pickEffectivePrice(variantPriceFields(api, v ?? {})))
-    .filter((n) => typeof n === "number" && Number.isFinite(n) && n > 0);
-  const minVariantBlockPrice =
-    variantBlockPrices.length > 0 ? Math.min(...variantBlockPrices) : 0;
 
   const sizeNamesFromVariant =
     (api.variant ?? [])
@@ -343,12 +391,7 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
       })
       .filter(Boolean) as NonNullable<Product["colors"]>;
 
-  const firstVariantSize =
-    (api.variant ?? []).flatMap((v) => v?.size ?? [])[0] ?? undefined;
-  const computedPrice =
-    pickEffectivePrice(variantPriceFields(api, api)) ||
-    pickEffectivePrice(variantPriceFields(api, firstVariantSize ?? {})) ||
-    minVariantBlockPrice;
+  const computedPrice = resolveCatalogProductPrice(api);
 
   const variantBlocks = api.variant ?? [];
   const productCompare = pickCompareAtPrice(variantPriceFields(api, api));

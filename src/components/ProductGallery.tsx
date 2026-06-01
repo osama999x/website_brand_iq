@@ -23,14 +23,14 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   return (
     <div className="flex flex-col gap-3 lg:sticky lg:top-24">
       {/* Main image */}
-      <div className="relative w-full aspect-square max-h-[min(85vh,720px)] overflow-hidden bg-neutral-100">
+      <div className="product-media-frame relative w-full aspect-[3/4] max-h-[min(90vh,800px)]">
         <ProductMedia
           key={safeIndex}
           src={resolvedImages[safeIndex]}
           alt={`${productName} — view ${safeIndex + 1}`}
           priority
-          className="product-media-image transition-opacity duration-300"
-          sizes="(max-width: 1024px) 100vw, 50vw"
+          fit="cover"
+          className="transition-opacity duration-300"
         />
       </div>
 
@@ -42,7 +42,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               key={i}
               onClick={() => setActiveIndex(i)}
               aria-label={`View image ${i + 1}`}
-              className={`relative aspect-square overflow-hidden bg-neutral-100 cursor-pointer transition-all duration-200 ${
+              className={`product-media-frame relative aspect-[3/4] cursor-pointer transition-all duration-200 ${
                 i === safeIndex
                   ? "ring-2 ring-neutral-900 ring-offset-1"
                   : "ring-1 ring-neutral-200 hover:ring-neutral-400"
@@ -51,8 +51,7 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
               <ProductMedia
                 src={src}
                 alt={`${productName} thumbnail ${i + 1}`}
-                className="product-media-image"
-                sizes="15vw"
+                fit="cover"
               />
             </button>
           ))}
