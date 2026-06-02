@@ -288,12 +288,15 @@ function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"])
     api.variant?.[0]?.size?.map((s) => s.size ?? "M").filter(Boolean) ??
     ["S", "M", "L", "XL"];
 
+  const rootCompareAtPrice = pickCompareAtPrice(variantPriceFields(api, api));
+
   return {
     id,
     name: api.name ?? "Product",
     fit: "Regular Fit",
     gender: genderHint ?? "Men",
     price,
+    ...(rootCompareAtPrice ? { compareAtPrice: rootCompareAtPrice } : {}),
     image,
     images: [image],
     category: (api.category != null ? String(api.category) : "General"),

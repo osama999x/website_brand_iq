@@ -28,25 +28,17 @@ export type PriceFields = {
   discount?: number;
 };
 
-/** Use discounted price only when the API marks an active sale/discount. */
+/** Use discounted price when it is a valid positive number lower than actualPrice. */
 export function shouldUseDiscountedPrice(input: PriceFields): boolean {
-  if (input.isSale === true) return true;
-  if (typeof input.discount === "number" && Number.isFinite(input.discount) && input.discount > 0) {
-    return true;
-  }
-  if (input.isDiscount === false) return false;
-  if (input.isDiscount !== true) return false;
-
   const d = input.discountedPrice;
   const a = input.actualPrice;
-  return (
-    typeof d === "number" &&
-    Number.isFinite(d) &&
-    d > 0 &&
-    typeof a === "number" &&
-    Number.isFinite(a) &&
-    a > d
-  );
+  if (
+    typeof d === "number" && Number.isFinite(d) && d > 0 &&
+    typeof a === "number" && Number.isFinite(a) && a > d
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function pickEffectivePrice(input: PriceFields): number {

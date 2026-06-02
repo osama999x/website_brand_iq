@@ -18,7 +18,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { name, fit, gender, price, image, images, isNew, slug } = product;
+  const { name, fit, gender, price, compareAtPrice, image, images, isNew, slug } = product;
   const priceRange = getPriceRange(product);
   const hasVariantRange = priceRange.min !== priceRange.max;
   const addToCart = useCartStore((s) => s.addToCart);
@@ -81,18 +81,25 @@ export default function ProductCard({ product }: ProductCardProps) {
           <p className="text-xs text-neutral-500">
             {fit} | {gender}
           </p>
-          <p className="text-sm font-bold text-neutral-900 mt-0.5">
-            {hasVariantRange ? (
-              <>
-                <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-neutral-500 mr-1.5">
-                  From
-                </span>
-                {formatMoney(priceRange.min)}
-              </>
-            ) : (
-              formatMoney(price)
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-sm font-bold text-neutral-900">
+              {hasVariantRange ? (
+                <>
+                  <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-neutral-500 mr-1.5">
+                    From
+                  </span>
+                  {formatMoney(priceRange.min)}
+                </>
+              ) : (
+                formatMoney(price)
+              )}
+            </p>
+            {!hasVariantRange && compareAtPrice != null && compareAtPrice > price && (
+              <p className="text-xs font-normal text-neutral-400 line-through">
+                {formatMoney(compareAtPrice)}
+              </p>
             )}
-          </p>
+          </div>
         </div>
       </Link>
 
