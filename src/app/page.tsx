@@ -44,7 +44,22 @@ export default async function Home({ searchParams }: PageProps) {
 
     const genderHint =
       gender === "women" ? "Women" : gender === "juniors" ? "Juniors" : gender === "men" ? "Men" : undefined;
-    if (apiProducts?.length) featuredProducts = mapApiProductsToProducts(apiProducts, genderHint);
+
+    // Build product-ID → gender from the categories payload so each card
+    // shows the correct gender instead of defaulting to "Men" for every product.
+    const productGenderMap: Record<string, "Men" | "Women" | "Juniors"> = {};
+    for (const cat of data.categories ?? []) {
+      const catGender: "Men" | "Women" | "Juniors" =
+        cat.gender === "women" ? "Women" : cat.gender === "juniors" ? "Juniors" : "Men";
+      for (const sub of cat.subCategory ?? []) {
+        for (const prod of sub.products ?? []) {
+          productGenderMap[prod._id] = catGender;
+        }
+      }
+    }
+
+    if (apiProducts?.length)
+      featuredProducts = mapApiProductsToProducts(apiProducts, genderHint, productGenderMap);
 
     const first = data.campaigns?.[0];
     if (first) {

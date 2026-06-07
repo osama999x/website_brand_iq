@@ -91,6 +91,7 @@ export interface ApiCategory {
   icon?: string;
   thumbnail?: string;
   description?: string;
+  gender?: string;
   productCount?: number;
   subCategory?: Array<{
     _id: string;
@@ -308,8 +309,12 @@ function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"])
   };
 }
 
-export function mapApiProductsToProducts(apiProducts: ApiProduct[], genderHint?: Product["gender"]): Product[] {
-  return apiProducts.map((p) => mapApiProductToProduct(p, genderHint));
+export function mapApiProductsToProducts(
+  apiProducts: ApiProduct[],
+  genderHint?: Product["gender"],
+  genderMap?: Record<string, Product["gender"]>
+): Product[] {
+  return apiProducts.map((p) => mapApiProductToProduct(p, genderMap?.[p._id] ?? genderHint));
 }
 
 export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
