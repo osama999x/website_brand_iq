@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCartStore, selectCartCount } from "../store/cartStore";
 
@@ -103,9 +104,14 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
-            <span className="text-xl font-black tracking-tight text-neutral-900 uppercase">
-              Brand<span className="text-neutral-400">IQ</span>
-            </span>
+            <Image
+              src="/loho-pnggg.png"
+              alt="Brand IQ"
+              width={120}
+              height={36}
+              priority
+              className="object-contain"
+            />
           </Link>
 
           {/* Desktop category links */}
