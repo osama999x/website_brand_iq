@@ -2,6 +2,7 @@ import type { ApiProductDetail } from "../types/api";
 import type { CartItem } from "../store/cartStore";
 import type { OrderProductLine } from "../types/order";
 import { pickEffectivePrice, type PriceFields } from "./pricing";
+import { isCosmeticsCategory, resolveOrderSize } from "./shopGender";
 
 function pickSku(row: Record<string, unknown>): string | undefined {
   const v =
@@ -235,6 +236,27 @@ export function resolveSkuPriceFromDetail(
   const trimmedSize = item.size.trim();
   const buckets = buildColorSizeBucketsFromDetail(detail);
 
+  if (!trimmedSize && isCosmeticsCategory(detail.category)) {
+    const v0 = detail.variant?.[0];
+    const blockSku =
+      (typeof v0?.sku === "string" && v0.sku.trim() ? v0.sku.trim() : undefined) ??
+      (item.sku?.trim() || undefined);
+    if (blockSku) {
+      const unit =
+        (v0 && typeof v0 === "object" ? pickUnitPrice(v0 as Record<string, unknown>) : undefined) ??
+        item.price;
+      return { sku: blockSku, price: unit };
+    }
+
+    for (const v of detail.variant ?? []) {
+      const colorSku = typeof v?.sku === "string" && v.sku.trim() ? v.sku.trim() : undefined;
+      if (colorSku) {
+        const unit = pickUnitPrice((v ?? {}) as Record<string, unknown>) ?? item.price;
+        return { sku: colorSku, price: unit };
+      }
+    }
+  }
+
   const combo = /^(.+?)\s+\(([^)]+)\)\s*$/.exec(trimmedSize);
   if (combo) {
     const sizePart = combo[1]!.trim();
@@ -332,8 +354,19 @@ export async function resolveOrderProductLines(
       }
       sku = resolved.sku;
       price = resolved.price;
+
+      lines.push({
+        productId: item.slug,
+        quantity: item.quantity,
+        price,
+        sku: sku!,
+        size: resolveOrderSize({ category: detail.category }, item.size),
+      });
+      continue;
     } else if (!sku) {
-      sku = `SKU-${item.size.replace(/\s+/g, "-").toUpperCase()}`;
+      sku = item.size.trim()
+        ? `SKU-${item.size.replace(/\s+/g, "-").toUpperCase()}`
+        : `SKU-${item.slug.slice(-8).toUpperCase()}`;
     }
 
     lines.push({

@@ -10,6 +10,7 @@ import type {
 } from "../types/api";
 import { mapApiProductsToProducts } from "../types/api";
 import type { Product } from "../data/products";
+import { parseShopGender, type ShopGender } from "../lib/shopGender";
 
 /** Query params for list endpoints */
 export interface ListParams {
@@ -40,13 +41,19 @@ function buildListParams(params: ListParams = {}): Record<string, string | numbe
 /** GET /all — home screen data */
 export async function getHome(gender?: string, filters?: ListParams): Promise<HomeResponse> {
   noStore();
+  const parsedGender = parseShopGender(gender);
   const res = await apiClient<ApiWrapper<HomeResponse>>("all", {
     params: {
-      ...(gender ? { gender } : {}),
+      ...(parsedGender ? { gender: parsedGender } : {}),
       ...buildListParams(filters),
     },
   });
   return res.data;
+}
+
+/** Alias for GET /home/all — same as getHome */
+export async function getHomeAll(gender?: ShopGender | string, filters?: ListParams): Promise<HomeResponse> {
+  return getHome(gender, filters);
 }
 
 async function getNewArrivals(params?: ListParams) {
@@ -79,8 +86,9 @@ async function getRelatedProducts(productId: string, params?: ListParams) {
 
 /** GET /getAllCategories */
 export async function getAllCategories(gender?: string): Promise<ApiCategory[]> {
+  const parsedGender = parseShopGender(gender);
   const res = await apiClient<ApiWrapper<ApiCategory[]>>("getAllCategories", {
-    params: gender ? { gender } : undefined,
+    params: parsedGender ? { gender: parsedGender } : undefined,
   });
   return res.data;
 }

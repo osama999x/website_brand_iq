@@ -17,6 +17,7 @@ import {
 import { mapApiProductsToProducts } from "../../types/api";
 import type { Product } from "../../data/products";
 import type { ApiFilterOptions } from "../../types/api";
+import { parseShopGender, toProductGenderLabel, type ProductGenderLabel } from "../../lib/shopGender";
 
 type SortOption = "newest" | "price-asc" | "price-desc";
 
@@ -68,11 +69,12 @@ function ChevronDown() {
 }
 
 export default function ProductsClient({ gender }: { gender?: string }) {
+  const initialGender = parseShopGender(gender) ?? null;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sort, setSort] = useState<SortOption>("newest");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [subCategoryId, setSubCategoryId] = useState<string | null>(null);
-  const [selectedGender, setSelectedGender] = useState<string | null>(gender ?? null);
+  const [selectedGender, setSelectedGender] = useState<string | null>(initialGender);
   const [keyword, setKeyword] = useState<string>("");
   const [filterOptions, setFilterOptions] = useState<ApiFilterOptions | null>(null);
   const [products, setProducts] = useState<Product[]>(defaultProducts);
@@ -95,7 +97,7 @@ export default function ProductsClient({ gender }: { gender?: string }) {
   }
 
   useEffect(() => {
-    setSelectedGender(gender ?? null);
+    setSelectedGender(parseShopGender(gender) ?? null);
   }, [gender]);
 
   useEffect(() => {
@@ -164,21 +166,25 @@ export default function ProductsClient({ gender }: { gender?: string }) {
                       .flatMap((c) => c.subCategory ?? [])
                       .flatMap((s) => s.products ?? []);
 
-            const genderHint =
-              selectedGender === "women"
-                ? "Women"
-                : selectedGender === "juniors"
-                  ? "Juniors"
-                  : selectedGender === "men"
-                    ? "Men"
-                    : undefined;
-            const mapped = apiProducts?.length ? mapApiProductsToProducts(apiProducts, genderHint) : [];
-            if (!cancelled) {
-              setProducts(mapped.length ? mapped : defaultProducts);
-              setTotal(mapped.length ? mapped.length : defaultProducts.length);
+            const genderHint = toProductGenderLabel(selectedGender ?? undefined);
+            const productGenderMap: Record<string, ProductGenderLabel> = {};
+            for (const cat of data.categories ?? []) {
+              const catGender = toProductGenderLabel(cat.gender) ?? "Men";
+              for (const sub of cat.subCategory ?? []) {
+                for (const prod of sub.products ?? []) {
+                  productGenderMap[prod._id] = catGender;
+                }
+              }
             }
-          } catch {
-            // fallback to old endpoint if home/all isn't available
+            const mapped = apiProducts?.length
+              ? mapApiProductsToProducts(apiProducts, genderHint, productGenderMap)
+              : [];
+            if (!cancelled) {
+              setProducts(mapped);
+              setTotal(mapped.length);
+            }
+          } catch (homeErr) {
+            if (selectedGender) throw homeErr;
             const data = await getNewArrivalsMapped(params);
             if (!cancelled) {
               setProducts(data.products);
@@ -189,8 +195,8 @@ export default function ProductsClient({ gender }: { gender?: string }) {
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Failed to load products");
-          setProducts(defaultProducts);
-          setTotal(defaultProducts.length);
+          setProducts(selectedGender ? [] : defaultProducts);
+          setTotal(selectedGender ? 0 : defaultProducts.length);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -252,8 +258,7 @@ export default function ProductsClient({ gender }: { gender?: string }) {
             filterOptions={filterOptions}
             selectedGender={selectedGender}
             onGenderChange={(g) => {
-              setSelectedGender(g);
-              // reset category selection when gender changes (prevents mismatched category lists)
+              setSelectedGender(parseShopGender(g) ?? null);
               setCategoryId(null);
               setSubCategoryId(null);
             }}
@@ -341,6 +346,12 @@ export default function ProductsClient({ gender }: { gender?: string }) {
                   </div>
                 ))}
               </div>
+            ) : products.length === 0 ? (
+              <p className="text-sm text-neutral-500 py-12 text-center">
+                {selectedGender === "cosmetics"
+                  ? "No cosmetics products found. Check back soon."
+                  : "No products found."}
+              </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
                 {products.map((product) => (

@@ -1,6 +1,7 @@
 import type { Product } from "../data/products";
 import type { CartItem } from "../store/cartStore";
 import { isMongoObjectId, lookupPriceForSize, lookupSkuForSize } from "./productVariantMaps";
+import { resolveOrderSize, shouldShowSizeUi } from "./shopGender";
 
 function findColorBucketKey(
   colorSizeMaps: NonNullable<Product["colorSizeMaps"]>,
@@ -44,6 +45,48 @@ export function buildQuickAddCartLine(product: Product): Omit<CartItem, "quantit
   const hasSizes = sizes.length > 0;
   const hasBuckets =
     colorSizeMaps != null && Object.keys(colorSizeMaps).length > 0;
+  const showSizeUi = shouldShowSizeUi({
+    category: { gender: product.categoryGender, name: product.category },
+    categoryGender: product.categoryGender,
+  });
+
+  if (!showSizeUi) {
+    if (hasColors) {
+      const c = colors![0]!;
+      const sku =
+        (typeof c.sku === "string" && c.sku.trim() ? c.sku.trim() : undefined) ?? baseSku?.trim();
+      if (!sku && isMongoObjectId(slug)) return null;
+      const unit = typeof c.price === "number" && c.price > 0 ? c.price : price;
+      return {
+        productId: id,
+        slug,
+        name,
+        price: unit,
+        ...taxPart,
+        image,
+        size: resolveOrderSize(
+          { category: { gender: product.categoryGender, name: product.category }, categoryGender: product.categoryGender },
+          ""
+        ),
+        ...(sku ? { sku } : {}),
+      };
+    }
+
+    if (baseSku?.trim()) {
+      return {
+        productId: id,
+        slug,
+        name,
+        price,
+        ...taxPart,
+        image,
+        size: "",
+        sku: baseSku.trim(),
+      };
+    }
+
+    return null;
+  }
 
   // 1) Color + size (API matrix)
   if (hasColors && hasSizes && hasBuckets) {

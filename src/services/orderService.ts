@@ -72,3 +72,36 @@ export async function returnOrder(payload: ReturnOrderPayload): Promise<ReturnOr
   });
   return res;
 }
+
+export interface CancelOrderResponse {
+  msg: string;
+}
+
+export async function cancelOrder(orderId: string): Promise<CancelOrderResponse> {
+  const normalizedOrderId = String(orderId ?? "").trim();
+  if (!normalizedOrderId) {
+    throw new Error("orderId is required");
+  }
+
+  try {
+    return await apiClient<CancelOrderResponse>(`/order/${encodeURIComponent(normalizedOrderId)}/cancel`, {
+      method: "POST",
+      baseUrl: getApiV1Root(),
+    });
+  } catch {
+    // Backward compatibility while backend/frontend routes are transitioning.
+    try {
+      return await apiClient<CancelOrderResponse>("/order/orderCancel", {
+        method: "POST",
+        baseUrl: getApiV1Root(),
+        body: { orderId: normalizedOrderId },
+      });
+    } catch {
+      return await apiClient<CancelOrderResponse>("/order/orderCancel", {
+        method: "GET",
+        baseUrl: getApiV1Root(),
+        params: { orderId: normalizedOrderId },
+      });
+    }
+  }
+}

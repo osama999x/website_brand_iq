@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import { getHome } from "../services/homeService";
 import { mapApiProductsToProducts } from "../types/api";
 import type { ApiHero } from "../types/api";
+import { parseShopGender, toProductGenderLabel, type ProductGenderLabel } from "../lib/shopGender";
 
 /** Always refetch catalog — do not serve a cached home product grid with old prices. */
 export const dynamic = "force-dynamic";
@@ -24,11 +25,13 @@ export default async function Home({ searchParams }: PageProps) {
   let featuredProducts: Awaited<ReturnType<typeof mapApiProductsToProducts>> | undefined;
   let campaign: { banner?: string; campaignName?: string } | undefined;
   let hero: ApiHero | undefined;
+  let activeGender: ReturnType<typeof parseShopGender> = undefined;
+  let loadError: string | null = null;
 
   try {
     const params = (await searchParams) ?? {};
-    const gender = params.gender;
-    const data = await getHome(gender);
+    activeGender = parseShopGender(params.gender);
+    const data = await getHome(activeGender);
 
     const heroRaw = data.hero;
     const heroList = Array.isArray(heroRaw) ? heroRaw : heroRaw ? [heroRaw] : [];
@@ -42,15 +45,11 @@ export default async function Home({ searchParams }: PageProps) {
       (data.allProducts?.length ? data.allProducts : null) ??
       flattenCategoryProducts(data);
 
-    const genderHint =
-      gender === "women" ? "Women" : gender === "juniors" ? "Juniors" : gender === "men" ? "Men" : undefined;
+    const genderHint = toProductGenderLabel(activeGender);
 
-    // Build product-ID → gender from the categories payload so each card
-    // shows the correct gender instead of defaulting to "Men" for every product.
-    const productGenderMap: Record<string, "Men" | "Women" | "Juniors"> = {};
+    const productGenderMap: Record<string, ProductGenderLabel> = {};
     for (const cat of data.categories ?? []) {
-      const catGender: "Men" | "Women" | "Juniors" =
-        cat.gender === "women" ? "Women" : cat.gender === "juniors" ? "Juniors" : "Men";
+      const catGender = toProductGenderLabel(cat.gender) ?? "Men";
       for (const sub of cat.subCategory ?? []) {
         for (const prod of sub.products ?? []) {
           productGenderMap[prod._id] = catGender;
@@ -68,8 +67,10 @@ export default async function Home({ searchParams }: PageProps) {
         campaignName: first.campaignName,
       };
     }
-  } catch {
-    // API unavailable: ProductGrid and HeroSection use default/static content
+  } catch (e) {
+    loadError = e instanceof Error ? e.message : "Could not load home data";
+    // Gender tabs must not fall back to mock apparel when the API fails.
+    featuredProducts = activeGender ? [] : undefined;
   }
 
   return (
@@ -91,7 +92,26 @@ export default async function Home({ searchParams }: PageProps) {
             : undefined
         }
       />
-      <ProductGrid products={featuredProducts} />
+      {loadError && activeGender ? (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <p className="text-sm text-red-700 border border-red-200 bg-red-50 px-4 py-3">
+            {loadError}
+            {activeGender === "cosmetics"
+              ? " — cosmetics may not be enabled on this API yet. Use your local backend or deploy cosmetics support to production."
+              : null}
+          </p>
+        </div>
+      ) : null}
+      <ProductGrid
+        products={featuredProducts}
+        emptyMessage={
+          loadError && activeGender
+            ? "Could not load products for this tab."
+            : activeGender === "cosmetics" && featuredProducts?.length === 0
+              ? "No cosmetics products available yet. Check back soon."
+              : undefined
+        }
+      />
       <Footer />
     </main>
   );

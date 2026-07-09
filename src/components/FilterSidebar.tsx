@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useCategories } from "../context/CategoriesContext";
 import type { ApiFilterOptions } from "../types/api";
+import { SHOP_GENDERS } from "../lib/shopGender";
 
-const FALLBACK_GENDERS = ["men", "women", "juniors"];
+const FALLBACK_GENDERS = SHOP_GENDERS.filter((g) => g !== "unisex");
 
 interface FilterSidebarProps {
   isOpen: boolean;
@@ -47,6 +48,11 @@ function CloseIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   );
+}
+
+function formatGenderLabel(gender: string): string {
+  if (gender === "cosmetics") return "Cosmetics";
+  return gender.charAt(0).toUpperCase() + gender.slice(1);
 }
 
 function FilterSection({
@@ -234,7 +240,7 @@ export default function FilterSidebar({
                 className="h-4 w-4 border-neutral-400 accent-neutral-900 cursor-pointer"
               />
               <span className="text-sm text-neutral-700 group-hover/label:text-neutral-900 transition-colors">
-                {g}
+                {formatGenderLabel(g)}
               </span>
             </label>
           ))}

@@ -5,10 +5,12 @@ import type { Product } from "../data/products";
 
 interface ProductGridProps {
   products?: Product[];
+  emptyMessage?: string;
 }
 
-export default function ProductGrid({ products: productsProp }: ProductGridProps) {
+export default function ProductGrid({ products: productsProp, emptyMessage }: ProductGridProps) {
   const products = productsProp ?? defaultProducts;
+  const showEmpty = productsProp != null && products.length === 0;
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
       {/* Section header */}
@@ -30,11 +32,17 @@ export default function ProductGrid({ products: productsProp }: ProductGridProps
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-10">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {showEmpty ? (
+        <p className="text-sm text-neutral-500 py-12 text-center">
+          {emptyMessage ?? "No products available right now."}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-10">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
 
       {/* Mobile shop all link */}
       <div className="mt-10 flex justify-center sm:hidden">

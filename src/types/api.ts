@@ -188,10 +188,30 @@ import type { Product } from "../data/products";
 import { pickListProductImageSource, resolveProductImageUrl } from "../lib/assets";
 import { buildVariantMapsFromDetail } from "../lib/productVariantMaps";
 import {
+  isCosmeticsCategory,
+  parseShopGender,
+  toProductGenderLabel,
+  type ShopGender,
+} from "../lib/shopGender";
+import {
   pickCompareAtPrice,
   pickEffectivePrice,
   type PriceFields,
 } from "../lib/pricing";
+
+function apiCategoryMeta(api: ApiProduct | ApiProductDetail): { gender?: string; name?: string } {
+  const c = api.category;
+  if (c && typeof c === "object" && "name" in c) {
+    const cat = c as { gender?: string; name?: string };
+    return { gender: cat.gender, name: cat.name };
+  }
+  if (typeof c === "string" && c.trim()) return { name: c.trim() };
+  return {};
+}
+
+function mapCategoryGender(genderRaw?: string): ShopGender | undefined {
+  return parseShopGender(genderRaw);
+}
 
 function numericIdFromString(s: string): number {
   let n = 0;
@@ -279,15 +299,27 @@ function variantPriceFields(
  * Maps backend API product to frontend Product shape so existing UI components work unchanged.
  * Uses _id for slug (and derived numeric id); defaults missing fields.
  */
-function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"]): Product {
+function mapApiProductToProduct(
+  api: ApiProduct,
+  genderHint?: Product["gender"],
+  genderMap?: Record<string, Product["gender"]>
+): Product {
   const id = numericIdFromString(api._id);
   const slug = api._id.toString();
   const price = resolveCatalogProductPrice(api);
   const colors = mapListProductColors(api);
   const image = ensureAbsoluteAssetUrl(pickListProductImageSource(api));
-  const sizes: string[] =
-    api.variant?.[0]?.size?.map((s) => s.size ?? "M").filter(Boolean) ??
-    ["S", "M", "L", "XL"];
+  const categoryMeta = apiCategoryMeta(api);
+  const mappedGender = genderMap?.[api._id] ?? genderHint ?? toProductGenderLabel(categoryMeta.gender) ?? "Men";
+  const categoryGender =
+    mapCategoryGender(categoryMeta.gender) ??
+    (mappedGender === "Cosmetics" ? ("cosmetics" as ShopGender) : undefined);
+  const cosmetics =
+    isCosmeticsCategory({ ...categoryMeta, gender: categoryGender ?? categoryMeta.gender }) ||
+    mappedGender === "Cosmetics";
+  const sizes: string[] = cosmetics
+    ? []
+    : api.variant?.[0]?.size?.map((s) => s.size ?? "M").filter(Boolean) ?? ["S", "M", "L", "XL"];
 
   const rootCompareAtPrice = pickCompareAtPrice(variantPriceFields(api, api));
 
@@ -295,12 +327,13 @@ function mapApiProductToProduct(api: ApiProduct, genderHint?: Product["gender"])
     id,
     name: api.name ?? "Product",
     fit: "Regular Fit",
-    gender: genderHint ?? "Men",
+    gender: mappedGender,
+    ...(categoryGender ? { categoryGender } : {}),
     price,
     ...(rootCompareAtPrice ? { compareAtPrice: rootCompareAtPrice } : {}),
     image,
     images: [image],
-    category: (api.category != null ? String(api.category) : "General"),
+    category: categoryMeta.name ?? (api.category != null ? String(api.category) : "General"),
     isNew: Boolean(api.isFeatured),
     slug,
     description: (api.title as string) ?? api.name ?? "",
@@ -314,12 +347,15 @@ export function mapApiProductsToProducts(
   genderHint?: Product["gender"],
   genderMap?: Record<string, Product["gender"]>
 ): Product[] {
-  return apiProducts.map((p) => mapApiProductToProduct(p, genderMap?.[p._id] ?? genderHint));
+  return apiProducts.map((p) => mapApiProductToProduct(p, genderHint, genderMap));
 }
 
 export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
   const id = numericIdFromString(api._id);
   const slug = api._id.toString();
+  const categoryMeta = apiCategoryMeta(api);
+  const categoryGender = mapCategoryGender(categoryMeta.gender);
+  const cosmetics = isCosmeticsCategory(categoryMeta);
 
   const { sizeToSku, sizeToPrice } = buildVariantMapsFromDetail(api);
 
@@ -373,13 +409,15 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
   }
 
   const sizeNames =
-    sizeNamesFromVariant.length > 0
-      ? sizeNamesFromVariant
-      : Object.keys(sizeToSku).length > 0
-        ? Object.keys(sizeToSku)
-        : Object.keys(sizeToPrice).length > 0
-          ? Object.keys(sizeToPrice)
-          : undefined;
+    cosmetics
+      ? []
+      : sizeNamesFromVariant.length > 0
+        ? sizeNamesFromVariant
+        : Object.keys(sizeToSku).length > 0
+          ? Object.keys(sizeToSku)
+          : Object.keys(sizeToPrice).length > 0
+            ? Object.keys(sizeToPrice)
+            : undefined;
 
   const colors =
     (api.variant ?? [])
@@ -431,15 +469,14 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
     ensureAbsoluteAssetUrl(x)
   );
 
-  const genderRaw = api.category?.gender;
-  const gender: Product["gender"] =
-    genderRaw === "women" ? "Women" : genderRaw === "juniors" ? "Juniors" : "Men";
+  const gender: Product["gender"] = toProductGenderLabel(categoryMeta.gender) ?? "Men";
 
   return {
     id,
     name: api.name ?? "Product",
     fit: "Regular Fit",
     gender,
+    ...(categoryGender ? { categoryGender } : {}),
     price: computedPrice,
     ...(compareAtPrice && compareAtPrice > computedPrice ? { compareAtPrice } : {}),
     ...(typeof api.taxAmount === "number" && Number.isFinite(api.taxAmount) && api.taxAmount > 0
@@ -448,13 +485,13 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
     ...(typeof api.isTaxable === "boolean" ? { isTaxable: api.isTaxable } : {}),
     image,
     images: images.length ? images : [image],
-    category: api.category?.name ?? "General",
+    category: categoryMeta.name ?? api.category?.name ?? "General",
     isNew: Boolean(api.isFeatured),
     slug,
     description: api.description ?? api.title ?? api.name ?? "",
     ...(api.longDescription ? { longDescription: api.longDescription } : {}),
-    ...(api.sizeGuide ? { sizeGuide: api.sizeGuide } : {}),
-    ...(api.sizeFit ? { sizeFit: api.sizeFit } : {}),
+    ...(!cosmetics && api.sizeGuide ? { sizeGuide: api.sizeGuide } : {}),
+    ...(!cosmetics && api.sizeFit ? { sizeFit: api.sizeFit } : {}),
     ...(api.deliveryReturns ? { deliveryReturns: api.deliveryReturns } : {}),
     ...(colors?.length ? { colors } : {}),
     ...(baseSku ? { baseSku } : {}),

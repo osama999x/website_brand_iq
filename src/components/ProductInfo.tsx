@@ -7,6 +7,7 @@ import { useCartStore } from "../store/cartStore";
 import { useWishlistStore } from "../store/wishlistStore";
 import { lookupSkuForSize, lookupPriceForSize } from "../lib/productVariantMaps";
 import { formatMoney, getPriceRange, getUnitPrice } from "../lib/pricing";
+import { resolveOrderSize, shouldShowSizeUi } from "../lib/shopGender";
 import Link from "next/link";
 
 interface ProductInfoProps {
@@ -99,6 +100,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     sizeToPrice,
     sizeToCompareAtPrice,
     colorSizeMaps,
+    categoryGender,
   } = product;
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
@@ -109,7 +111,8 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   const addToCart = useCartStore((s) => s.addToCart);
   const router = useRouter();
 
-  const needsSize = sizes.length > 0;
+  const showSizeUi = shouldShowSizeUi({ category: { gender: categoryGender, name: category }, categoryGender });
+  const needsSize = showSizeUi && sizes.length > 0;
   const hasColors = (colors?.length ?? 0) > 0;
   const isColorAndSize = hasColors && needsSize;
 
@@ -186,7 +189,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   function handleAddToCart() {
     const needsColor = hasColors;
 
-    if (needsSize && !selectedSize) {
+    if (showSizeUi && needsSize && !selectedSize) {
       setFeedback("no-size");
       setTimeout(() => setFeedback("idle"), 2000);
       return;
@@ -197,11 +200,18 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       return;
     }
 
-    const cartSize = isColorAndSize
+    const rawSize = isColorAndSize
       ? `${selectedSize} (${selectedColor})`
       : needsSize
         ? selectedSize
-        : (colors?.length ? `ONE SIZE (${selectedColor || colors[0]?.name || "DEFAULT"})` : "ONE SIZE");
+        : colors?.length
+          ? `ONE SIZE (${selectedColor || colors[0]?.name || "DEFAULT"})`
+          : "ONE SIZE";
+
+    const cartSize = resolveOrderSize(
+      { category: { gender: categoryGender, name: category }, categoryGender },
+      rawSize
+    );
 
     const sizeKey = selectedSize.toUpperCase();
     const unitPrice =
@@ -348,7 +358,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       ) : null}
 
       {/* Size selector */}
-      {(isColorAndSize ? scopedSizes.length > 0 : sizes.length > 0) ? (
+      {showSizeUi && (isColorAndSize ? scopedSizes.length > 0 : sizes.length > 0) ? (
         <div className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold tracking-[0.15em] uppercase text-neutral-900">
@@ -434,23 +444,25 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         <AccordionItem title="Product Description">
           <p>{longDescription || description}</p>
         </AccordionItem>
-        <AccordionItem title="Size & Fit">
-          {sizeFit ? (
-            <p>{sizeFit}</p>
-          ) : (
-            <ul className="list-disc list-inside space-y-1">
-              <li>Fit: {fit}</li>
-            </ul>
-          )}
-          {shouldShowSizeGuide ? (
-            <div className="mt-3 pt-3 border-t border-neutral-200">
-              <p className="text-xs font-bold tracking-[0.15em] uppercase text-neutral-900 mb-2">
-                Size Guide
-              </p>
-              <p className="whitespace-pre-wrap">{normalizedSizeGuide}</p>
-            </div>
-          ) : null}
-        </AccordionItem>
+        {showSizeUi ? (
+          <AccordionItem title="Size & Fit">
+            {sizeFit ? (
+              <p>{sizeFit}</p>
+            ) : (
+              <ul className="list-disc list-inside space-y-1">
+                <li>Fit: {fit}</li>
+              </ul>
+            )}
+            {shouldShowSizeGuide ? (
+              <div className="mt-3 pt-3 border-t border-neutral-200">
+                <p className="text-xs font-bold tracking-[0.15em] uppercase text-neutral-900 mb-2">
+                  Size Guide
+                </p>
+                <p className="whitespace-pre-wrap">{normalizedSizeGuide}</p>
+              </div>
+            ) : null}
+          </AccordionItem>
+        ) : null}
         <AccordionItem title="Delivery & Returns">
           {deliveryReturns ? (
             <p className="whitespace-pre-wrap">{deliveryReturns}</p>

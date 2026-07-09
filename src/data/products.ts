@@ -1,8 +1,12 @@
+import type { ShopGender } from "../lib/shopGender";
+
 export interface Product {
   id: number;
   name: string;
   fit: string;
-  gender: "Men" | "Women" | "Juniors";
+  gender: "Men" | "Women" | "Juniors" | "Unisex" | "Cosmetics";
+  /** API category gender slug (e.g. cosmetics) for size/cart rules */
+  categoryGender?: ShopGender;
   price: number;
   /** Original price (for strike-through display when discounted) */
   compareAtPrice?: number;

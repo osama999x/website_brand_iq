@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
-import { getOrderTracking } from "../../services/orderService";
+import { cancelOrder, getOrderTracking } from "../../services/orderService";
 
 export default function TrackOrderPage() {
   const [orderNumber, setOrderNumber] = useState(() => {
@@ -15,7 +15,9 @@ export default function TrackOrderPage() {
     }
   });
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [result, setResult] = useState<Awaited<ReturnType<typeof getOrderTracking>> | null>(null);
 
   async function onSubmit(e: FormEvent) {
@@ -25,6 +27,7 @@ export default function TrackOrderPage() {
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
     setResult(null);
     try {
       const data = await getOrderTracking(value);
@@ -35,6 +38,27 @@ export default function TrackOrderPage() {
       setLoading(false);
     }
   }
+
+  async function onCancelOrder() {
+    if (!result?.order?.orderId) return;
+    setCanceling(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await cancelOrder(result.order.orderId);
+      setSuccess(response.msg || "Order canceled successfully.");
+      const refreshed = await getOrderTracking(result.order.orderId);
+      setResult(refreshed);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not cancel order");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
+  const canCancelPending = result?.order.status === "Pending" && result.order.isDeliver === false;
+  const canCancelAfterDispatch = result?.order.status === "Delivered" && result.order.isDeliver === true;
+  const canCancel = Boolean(canCancelPending || canCancelAfterDispatch);
 
   return (
     <>
@@ -83,6 +107,12 @@ export default function TrackOrderPage() {
           {error && (
             <div className="mt-6 border-t border-neutral-200 pt-5">
               <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="mt-6 border-t border-neutral-200 pt-5">
+              <p className="text-sm text-green-700">{success}</p>
             </div>
           )}
 
@@ -154,6 +184,17 @@ export default function TrackOrderPage() {
                   <li className="px-5 py-4 text-sm text-neutral-500">No timeline events yet.</li>
                 )}
               </ol>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={onCancelOrder}
+                  disabled={!canCancel || canceling}
+                  className="border border-neutral-900 bg-neutral-900 text-white text-xs font-bold tracking-[0.2em] uppercase px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-700 hover:border-neutral-700 transition-colors"
+                >
+                  {canceling ? "Canceling..." : "Cancel Order"}
+                </button>
+              </div>
             </div>
           )}
         </div>

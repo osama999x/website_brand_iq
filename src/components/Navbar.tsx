@@ -6,12 +6,13 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCartStore, selectCartCount } from "../store/cartStore";
 
-const categories = ["MEN", "WOMEN", "JUNIORS"] as const;
+const categories = ["MEN", "WOMEN", "JUNIORS", "COSMETICS"] as const;
 
 const genderHref: Record<(typeof categories)[number], string> = {
   MEN: "/?gender=men",
   WOMEN: "/?gender=women",
   JUNIORS: "/?gender=juniors",
+  COSMETICS: "/?gender=cosmetics",
 };
 
 function SearchIcon() {

@@ -58,7 +58,9 @@ export default function CartItemRow({ item }: CartItemRowProps) {
             >
               {name}
             </Link>
-            <p className="mt-1 text-xs text-neutral-500">Size: {size}</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              {item.size ? <>Size: {item.size}</> : null}
+            </p>
           </div>
 
           {/* Remove button */}
