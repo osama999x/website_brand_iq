@@ -9,6 +9,7 @@ import { lookupSkuForSize, lookupPriceForSize } from "../lib/productVariantMaps"
 import { formatMoney, getPriceRange, getUnitPrice } from "../lib/pricing";
 import { resolveOrderSize, shouldShowSizeUi } from "../lib/shopGender";
 import Link from "next/link";
+import RichTextContent from "./RichTextContent";
 
 interface ProductInfoProps {
   product: Product;
@@ -442,7 +443,16 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       {/* Accordion details */}
       <div className="mt-1">
         <AccordionItem title="Product Description">
-          <p>{longDescription || description}</p>
+          {longDescription &&
+          description &&
+          longDescription.trim() !== description.trim() ? (
+            <div className="space-y-3">
+              <RichTextContent html={description} />
+              <RichTextContent html={longDescription} />
+            </div>
+          ) : (
+            <RichTextContent html={longDescription || description} />
+          )}
         </AccordionItem>
         {showSizeUi ? (
           <AccordionItem title="Size & Fit">

@@ -9,6 +9,7 @@ import products from "../../../data/products";
 import { getProductDetail, getRelatedProductsMapped } from "../../../services/homeService";
 import type { Product } from "../../../data/products";
 import { mapApiProductDetailToProduct } from "../../../types/api";
+import { stripHtml } from "../../../lib/sanitizeHtml";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +29,11 @@ export async function generateMetadata({ params }: PageProps) {
   if (isMongoId(slug)) {
     try {
       const apiProduct = await getProductDetail(slug);
+      const rawDescription =
+        apiProduct.description ?? apiProduct.title ?? apiProduct.name ?? "";
       return {
         title: `${apiProduct.name} | BrandIQ`,
-        description: apiProduct.description ?? apiProduct.title ?? apiProduct.name,
+        description: stripHtml(rawDescription) || apiProduct.name,
       };
     } catch {
       // fallback to mock
@@ -40,7 +43,7 @@ export async function generateMetadata({ params }: PageProps) {
   if (!product) return { title: "Product | BrandIQ" };
   return {
     title: `${product.name} | BrandIQ`,
-    description: product.description,
+    description: stripHtml(product.description) || product.name,
   };
 }
 
