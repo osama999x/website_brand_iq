@@ -213,6 +213,13 @@ function mapCategoryGender(genderRaw?: string): ShopGender | undefined {
   return parseShopGender(genderRaw);
 }
 
+/** Use a fit line only when the API sent a short label, not a paragraph. */
+function shortFitLabel(value?: string): string {
+  const label = (value ?? "").replace(/\s+/g, " ").trim();
+  if (!label || label.length > 40) return "";
+  return label;
+}
+
 function numericIdFromString(s: string): number {
   let n = 0;
   for (let i = 0; i < s.length; i++) {
@@ -326,14 +333,16 @@ function mapApiProductToProduct(
   return {
     id,
     name: api.name ?? "Product",
-    fit: "Regular Fit",
+    fit: "",
     gender: mappedGender,
     ...(categoryGender ? { categoryGender } : {}),
     price,
     ...(rootCompareAtPrice ? { compareAtPrice: rootCompareAtPrice } : {}),
     image,
     images: [image],
-    category: categoryMeta.name ?? (api.category != null ? String(api.category) : "General"),
+    category:
+      categoryMeta.name ??
+      (cosmetics ? "Beauty" : typeof api.category === "string" && api.category.trim() ? api.category.trim() : ""),
     isNew: Boolean(api.isFeatured),
     slug,
     description: (api.title as string) ?? api.name ?? "",
@@ -474,7 +483,7 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
   return {
     id,
     name: api.name ?? "Product",
-    fit: "Regular Fit",
+    fit: cosmetics ? "" : shortFitLabel(api.sizeFit),
     gender,
     ...(categoryGender ? { categoryGender } : {}),
     price: computedPrice,
@@ -485,7 +494,7 @@ export function mapApiProductDetailToProduct(api: ApiProductDetail): Product {
     ...(typeof api.isTaxable === "boolean" ? { isTaxable: api.isTaxable } : {}),
     image,
     images: images.length ? images : [image],
-    category: categoryMeta.name ?? api.category?.name ?? "General",
+    category: categoryMeta.name ?? api.category?.name ?? (cosmetics ? "Beauty" : ""),
     isNew: Boolean(api.isFeatured),
     slug,
     description: api.description ?? api.title ?? api.name ?? "",

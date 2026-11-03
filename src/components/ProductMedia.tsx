@@ -10,6 +10,8 @@ interface ProductMediaProps {
   alt: string;
   /** `cover` = fills frame, no letterboxing; `contain` = full image with possible gaps */
   fit?: ProductMediaFit;
+  /** Apparel stays anchored to the collar. Beauty stays centered. */
+  focus?: "center" | "top";
   priority?: boolean;
   className?: string;
 }
@@ -21,6 +23,7 @@ export default function ProductMedia({
   src,
   alt,
   fit = "cover",
+  focus = "center",
   priority = false,
   className = "",
 }: ProductMediaProps) {
@@ -43,7 +46,7 @@ export default function ProductMedia({
       className={`product-media-image product-media-image--${fit} ${className}`.trim()}
       style={{
         objectFit,
-        objectPosition: "center",
+        objectPosition: focus === "top" ? "top center" : "center",
         width: "100%",
         height: "100%",
         maxWidth: "100%",

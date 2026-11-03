@@ -24,7 +24,7 @@ function TwitterIcon() {
 
 import Link from "next/link";
 
-const shopLinks = ["Men", "Women", "Juniors", "New Arrivals"];
+const shopLinks = ["Men", "Women", "Juniors", "Cosmetics", "New Arrivals"];
 const helpLinks = ["Track Order", "Returns & Exchanges", "Size Guide", "FAQs", "Contact Us", "Feedback"];
 const companyLinks = ["About Us", "Careers", "Press", "Store Locator", "Sustainability"];
 
@@ -32,6 +32,7 @@ const shopHref: Record<(typeof shopLinks)[number], string> = {
   Men: "/?gender=men",
   Women: "/?gender=women",
   Juniors: "/?gender=juniors",
+  Cosmetics: "/?gender=cosmetics",
   "New Arrivals": "/products",
   // Sale: "/products",
 };
@@ -66,7 +67,7 @@ export default function Footer() {
               Brand<span className="text-neutral-500">IQ</span>
             </span>
             <p className="mt-4 text-sm leading-relaxed text-neutral-400 max-w-xs">
-              Discover the latest in fashion. Quality clothing for men, women, and juniors — designed for everyday style.
+              Clothing and cosmetics for men, women, and juniors. Denim, tailoring, and beauty, made for every day.
             </p>
             {/* Social icons */}
             <div className="mt-6 flex items-center gap-4">

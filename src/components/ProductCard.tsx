@@ -128,10 +128,10 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       >
         <Link href={`/products/${slug}`} className="absolute inset-0" aria-label={name}>
           <div className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-[1.045]">
-            <ProductMedia src={imageSrc} alt={name} fit="cover" />
+            <ProductMedia src={imageSrc} alt={name} fit="cover" focus={beauty ? "center" : "top"} />
             {showSecondary && secondarySrc ? (
               <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-                <ProductMedia src={secondarySrc} alt="" fit="cover" />
+                <ProductMedia src={secondarySrc} alt="" fit="cover" focus={beauty ? "center" : "top"} />
               </div>
             ) : null}
           </div>
@@ -174,7 +174,11 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       <Link href={`/products/${slug}`} className="mt-3 flex flex-col gap-1">
         <h3 className="text-sm font-medium text-neutral-900 leading-snug tracking-wide">{name}</h3>
         <p className="text-xs text-neutral-500">
-          {beauty ? category || "Beauty" : `${fit} · ${gender}`}
+          {beauty
+            ? category && !/^general$/i.test(category)
+              ? category
+              : "Beauty"
+            : [fit, gender].filter(Boolean).join(" · ")}
         </p>
         <div className="mt-0.5 flex items-center gap-2">
           <p className="text-sm font-semibold text-neutral-900">

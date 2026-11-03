@@ -106,15 +106,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </Link>
             </li>
             <li aria-hidden="true">/</li>
-            <li className="text-neutral-900 font-medium truncate max-w-[180px]">
+            <li className="min-w-0 text-neutral-900 font-medium truncate">
               {product.name}
             </li>
           </ol>
         </nav>
 
         {/* Product layout: gallery (left) + info (right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-14 pb-16 lg:pb-24">
-          {/* Left — Image gallery */}
+        <div className="grid grid-cols-1 items-start gap-8 pb-16 lg:grid-cols-12 lg:gap-10 lg:pb-24 xl:gap-14">
+          <div className="lg:col-span-7">
           <ProductGallery
             images={galleryImages}
             productName={product.name}
@@ -125,9 +125,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 : "apparel"
             }
           />
+          </div>
 
-          {/* Right — Product info */}
-          <div className="lg:py-2">
+          <div className="buy-rise lg:col-span-5 lg:py-4 lg:pl-2">
             <ProductInfo product={product} />
           </div>
         </div>
@@ -152,7 +152,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-10">
+            <div
+              className={`grid grid-cols-2 gap-x-4 gap-y-10 ${
+                relatedProducts.length > 3 ? "lg:grid-cols-4" : "lg:grid-cols-3"
+              }`}
+            >
               {relatedProducts.map((p, index) => (
                 <ProductCard key={`${p.id}-${p.slug}`} product={p} index={index} />
               ))}

@@ -264,7 +264,8 @@ body {
 
 .hero-depth {
   display: inline-block;
-  transform: perspective(1100px) rotateX(var(--hy, 0deg)) rotateY(var(--hx, 0deg)) translateZ(28px);
+  max-width: 100%;
+  transform: perspective(1100px) rotateX(var(--hy, 0deg)) rotateY(var(--hx, 0deg));
   transform-style: preserve-3d;
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -325,6 +326,54 @@ body {
   --turn: 26deg;
 }
 
+.gallery-stage {
+  perspective: 1200px;
+}
+
+.thumb-3d {
+  transform: perspective(700px) rotateX(0deg) translateY(0);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.size-chip {
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .thumb-3d:hover {
+    transform: perspective(700px) rotateX(10deg) translateY(-4px);
+  }
+
+  .size-chip:hover {
+    transform: translateY(-2px);
+  }
+
+  .size-chip:active {
+    transform: translateY(0);
+  }
+}
+
+.buy-rise {
+  animation: rise-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dock-in {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.buy-dock {
+  animation: dock-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -342,7 +391,9 @@ body {
   .animate-heart,
   .animate-route-flash,
   .animate-route-progress,
-  .media-turn-3d {
+  .media-turn-3d,
+  .buy-rise,
+  .buy-dock {
     animation: none !important;
   }
 
@@ -351,7 +402,12 @@ body {
   .dept-3d,
   .dept-3d:hover,
   .dept-3d-beauty:hover,
-  .media-turn-3d {
+  .thumb-3d,
+  .thumb-3d:hover,
+  .size-chip,
+  .size-chip:hover,
+  .media-turn-3d,
+  .buy-dock {
     transform: none !important;
   }
 

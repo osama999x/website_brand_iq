@@ -79,7 +79,7 @@ export default function HeroSection({ shop, campaign, hero }: HeroSectionProps) 
 
   return (
     <section
-      className="relative w-full h-[90vh] min-h-[500px] overflow-hidden"
+      className="relative w-full h-[72vh] min-h-[520px] max-h-[820px]"
       onPointerMove={(e) => {
         if (reduced || e.pointerType !== "mouse") return;
         const r = e.currentTarget.getBoundingClientRect();
@@ -93,6 +93,7 @@ export default function HeroSection({ shop, campaign, hero }: HeroSectionProps) 
         e.currentTarget.style.setProperty("--hy", "0deg");
       }}
     >
+      <div className="absolute inset-0 overflow-hidden">
       {/* Background video (preferred) or image (fallback) */}
       {heroVideo ? (
         <video
@@ -125,17 +126,18 @@ export default function HeroSection({ shop, campaign, hero }: HeroSectionProps) 
       ) : (
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
       )}
+      </div>
 
       {/* Text content */}
       <div
         className="absolute inset-0 flex flex-col items-center justify-end pb-16 sm:pb-20 px-6 text-center text-white"
         style={textColor ? { color: textColor } : undefined}
       >
-        <p className="hero-rise text-xs sm:text-sm font-semibold tracking-[0.28em] uppercase mb-4 text-neutral-300">
+        <p className="hero-rise max-w-3xl text-[11px] sm:text-sm font-semibold tracking-[0.22em] sm:tracking-[0.28em] uppercase mb-4 text-neutral-300">
           {labelLine}
         </p>
         <h1
-          className="hero-rise font-display text-6xl sm:text-8xl lg:text-9xl font-medium uppercase tracking-tight leading-[0.9] mb-4"
+          className="hero-rise font-display max-w-[12ch] text-5xl sm:text-7xl lg:text-8xl font-medium uppercase tracking-tight leading-[0.92] mb-4"
           style={{ animationDelay: "90ms" }}
         >
           <span className="hero-depth">{headline}</span>

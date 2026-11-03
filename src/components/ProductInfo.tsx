@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "../data/products";
 import { useCartStore } from "../store/cartStore";
@@ -121,11 +121,24 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   const addToCart = useCartStore((s) => s.addToCart);
   const router = useRouter();
+  const addButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [showDock, setShowDock] = useState(false);
 
   const showSizeUi = shouldShowSizeUi({ category: { gender: categoryGender, name: category }, categoryGender });
   const beauty =
     gender === "Cosmetics" ||
     isCosmeticsProduct({ category, categoryGender });
+
+  useEffect(() => {
+    const el = addButtonRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowDock(!entry.isIntersecting),
+      { threshold: 0.4 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const needsSize = showSizeUi && sizes.length > 0;
   const hasColors = (colors?.length ?? 0) > 0;
   const isColorAndSize = hasColors && needsSize;
@@ -195,6 +208,15 @@ export default function ProductInfo({ product }: ProductInfoProps) {
 
   const priceRange = getPriceRange(product);
   const hasVariantRange = priceRange.min !== priceRange.max;
+  const salePct =
+    showCompare && effectiveCompareAt
+      ? Math.round((1 - selectedUnitPrice / effectiveCompareAt) * 100)
+      : 0;
+  const categoryLabel = /^(man|men|woman|women|junior|juniors|unisex|cosmetic|cosmetics|beauty|general)$/i.test(
+    (category ?? "").trim()
+  )
+    ? null
+    : category;
 
   /** Size-only products: true "FROM" across sizes. Color+size uses first color × first size, not global min. */
   const showingFromPrice =
@@ -279,9 +301,11 @@ export default function ProductInfo({ product }: ProductInfoProps) {
     <div className="flex flex-col">
       {/* Category + New badge */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-semibold tracking-[0.2em] uppercase text-neutral-500">
-          {category}
-        </span>
+        {categoryLabel ? (
+          <span className="text-xs font-semibold tracking-[0.2em] uppercase text-neutral-500">
+            {categoryLabel}
+          </span>
+        ) : null}
         {isNew && (
           <span className="bg-neutral-900 text-white text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">
             New
@@ -290,13 +314,13 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       </div>
 
       {/* Product name */}
-      <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900 leading-none">
+      <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.6rem] font-medium tracking-tight text-neutral-900 leading-[1.08]">
         {name}
       </h1>
 
       {/* Fit & gender */}
       <p className="mt-1.5 text-sm text-neutral-500">
-        {beauty ? category || "Beauty" : `${fit} | ${gender}`}
+        {beauty ? "Beauty" : [fit, gender].filter(Boolean).join(" · ")}
       </p>
 
       {/* Price */}
@@ -314,9 +338,14 @@ export default function ProductInfo({ product }: ProductInfoProps) {
           )}
         </p>
         {showCompare ? (
-          <p className="text-sm font-semibold text-neutral-500 line-through">
+          <p className="text-sm font-semibold text-neutral-400 line-through">
             {formatMoney(effectiveCompareAt!)}
           </p>
+        ) : null}
+        {salePct >= 1 ? (
+          <span className="bg-neutral-900 text-white text-[10px] font-semibold tracking-[0.16em] uppercase px-2 py-1">
+            -{salePct}%
+          </span>
         ) : null}
       </div>
       {typeof taxAmount === "number" && Number.isFinite(taxAmount) && taxAmount > 0 ? (
@@ -393,7 +422,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
                   setSelectedSize(size);
                   setFeedback("idle");
                 }}
-                className={`min-w-[48px] h-11 px-3 border text-sm font-medium transition-all duration-150 cursor-pointer ${
+                className={`size-chip min-w-[48px] h-11 px-3 border text-sm font-medium cursor-pointer ${
                   selectedSize === size
                     ? "border-neutral-900 bg-neutral-900 text-white"
                     : "border-neutral-300 text-neutral-700 hover:border-neutral-900 hover:text-neutral-900"
@@ -409,17 +438,15 @@ export default function ProductInfo({ product }: ProductInfoProps) {
           {feedback === "no-size" && (
             <p className="mt-2 text-xs text-red-500 font-medium">Please select a size to continue</p>
           )}
-          {!selectedSize && feedback !== "no-size" && (
-            <p className="mt-2 text-xs text-neutral-400">Please select a size</p>
-          )}
         </div>
       ) : null}
 
       {/* Add to cart + Wishlist */}
       <div className="flex gap-3">
         <button
+          ref={addButtonRef}
           onClick={handleAddToCart}
-          className={`flex-1 py-4 text-sm font-bold tracking-[0.15em] uppercase transition-all duration-200 cursor-pointer ${
+          className={`flex-1 py-4 text-sm font-bold tracking-[0.15em] uppercase transition-all duration-200 cursor-pointer active:scale-[0.99] ${
             feedback === "added"
               ? "bg-green-700 text-white"
               : "bg-neutral-900 text-white hover:bg-neutral-700"
@@ -444,6 +471,24 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       </div>
 
       {/* View cart link — visible only after adding */}
+      {showDock ? (
+        <div className="buy-dock sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 backdrop-blur px-4 py-3 flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-neutral-900">{formatMoney(selectedUnitPrice)}</p>
+            <p className="truncate text-[11px] text-neutral-500">{name}</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            className={`ml-auto shrink-0 px-5 py-3 text-[11px] font-semibold tracking-[0.16em] uppercase text-white ${
+              feedback === "added" ? "bg-green-700" : "bg-neutral-900"
+            }`}
+          >
+            {feedback === "added" ? "Added" : "Add to Cart"}
+          </button>
+        </div>
+      ) : null}
+
       {feedback === "added" && (
         <button
           onClick={() => router.push("/cart")}
