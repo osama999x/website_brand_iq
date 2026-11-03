@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
@@ -52,30 +52,37 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const { slug } = await params;
   let product = products.find((p) => p.slug === slug);
 
-  if (isMongoId(slug)) {
-    try {
+  try {
+    if (isMongoId(slug)) {
       const apiProduct = await getProductDetail(slug);
       product = mapApiProductDetailToProduct(apiProduct);
-    } catch {
-      // keep mock fallback
     }
+  } catch (error) {
+    unstable_rethrow(error);
+    product = products.find((p) => p.slug === slug);
   }
 
   if (!product) notFound();
 
-  let relatedProducts: Product[] = products
-    .filter((p) => p.id !== product.id && p.category === product.category)
-    .slice(0, 4);
-  if (relatedProducts.length === 0) {
-    relatedProducts = products.filter((p) => p.id !== product.id).slice(0, 4);
-  }
+  const galleryImages = (Array.isArray(product.images) ? product.images : []).filter(
+    (src) => typeof src === "string" && src.trim()
+  );
+  if (galleryImages.length === 0 && product.image) galleryImages.push(product.image);
 
+  let relatedProducts: Product[] = [];
   if (isMongoId(slug)) {
     try {
       const data = await getRelatedProductsMapped(slug, { page: 1, limit: 4 });
-      if (data.products.length > 0) relatedProducts = data.products;
+      relatedProducts = data.products.filter((p) => p.slug !== product.slug);
     } catch {
-      // keep mock related
+      relatedProducts = [];
+    }
+  } else {
+    relatedProducts = products
+      .filter((p) => p.id !== product.id && p.category === product.category)
+      .slice(0, 4);
+    if (relatedProducts.length === 0) {
+      relatedProducts = products.filter((p) => p.id !== product.id).slice(0, 4);
     }
   }
 
@@ -109,7 +116,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-14 pb-16 lg:pb-24">
           {/* Left — Image gallery */}
           <ProductGallery
-            images={product.images}
+            images={galleryImages}
             productName={product.name}
             presentation={
               product.gender === "Cosmetics" ||

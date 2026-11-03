@@ -1,6 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
-
-const ALLOWED_TAGS = [
+const ALLOWED_TAGS = new Set([
   "p",
   "br",
   "strong",
@@ -28,18 +26,9 @@ const ALLOWED_TAGS = [
   "img",
   "sub",
   "sup",
-];
+]);
 
-const ALLOWED_ATTR = [
-  "href",
-  "target",
-  "rel",
-  "src",
-  "alt",
-  "title",
-  "class",
-  "style",
-];
+const ALLOWED_ATTR = new Set(["href", "target", "rel", "src", "alt", "title", "class"]);
 
 /** True when the string looks like HTML from a rich-text editor. */
 export function looksLikeHtml(value: string): boolean {
@@ -60,11 +49,46 @@ export function stripHtml(value: string): string {
     .trim();
 }
 
-/** Sanitize RTE HTML for safe rendering (works on server and client). */
+function escapeAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function sanitizeAttrs(tag: string, raw: string): string {
+  const attrs: string[] = [];
+  const re = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(raw))) {
+    const name = match[1].toLowerCase();
+    if (!ALLOWED_ATTR.has(name)) continue;
+    const value = match[2] ?? match[3] ?? match[4] ?? "";
+    if ((name === "href" || name === "src") && /^\s*javascript:/i.test(value)) continue;
+    if (tag === "a" && name === "href") {
+      attrs.push(`href="${escapeAttr(value)}" rel="noopener noreferrer"`);
+      if (value.startsWith("http")) attrs.push(`target="_blank"`);
+      continue;
+    }
+    attrs.push(`${name}="${escapeAttr(value)}"`);
+  }
+  return attrs.length ? ` ${attrs.join(" ")}` : "";
+}
+
+/**
+ * Sanitize admin RTE HTML without jsdom. A DOM parser dependency was crashing
+ * product pages on the production server.
+ */
 export function sanitizeHtml(dirty: string): string {
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
-    ALLOW_DATA_ATTR: false,
+  const withoutDangerous = dirty
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta|svg)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+    .replace(/<\s*(script|style|iframe|object|embed|link|meta|svg)[^>]*\/?\s*>/gi, "");
+
+  return withoutDangerous.replace(/<\/?([a-zA-Z0-9]+)([^>]*)>/g, (full, tag: string, attrs: string) => {
+    const name = tag.toLowerCase();
+    if (!ALLOWED_TAGS.has(name)) return "";
+    if (full.startsWith("</")) return `</${name}>`;
+    return `<${name}${sanitizeAttrs(name, attrs)}>`;
   });
 }
