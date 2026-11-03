@@ -253,7 +253,7 @@ export default function CheckoutPage() {
           </ol>
         </nav>
 
-        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900 mb-8">
+        <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900 mb-8 leading-none">
           Checkout
         </h1>
 

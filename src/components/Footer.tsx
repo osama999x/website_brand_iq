@@ -62,7 +62,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           {/* Brand column */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <span className="text-xl font-black tracking-tight text-white uppercase">
+            <span className="font-display text-3xl font-medium tracking-tight text-white">
               Brand<span className="text-neutral-500">IQ</span>
             </span>
             <p className="mt-4 text-sm leading-relaxed text-neutral-400 max-w-xs">

@@ -76,7 +76,7 @@ export default function OrderSuccessPage() {
           </div>
 
           {/* Heading */}
-          <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-neutral-900 mb-3">
+          <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900 mb-3 leading-none">
             Order Confirmed!
           </h1>
           <p className="text-neutral-500 text-sm leading-relaxed mb-8 max-w-sm mx-auto">

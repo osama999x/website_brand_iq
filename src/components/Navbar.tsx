@@ -1,9 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCartStore, selectCartCount } from "../store/cartStore";
 
 const categories = ["MEN", "WOMEN", "JUNIORS", "COSMETICS"] as const;
@@ -72,14 +72,19 @@ function HamburgerIcon({ open }: { open: boolean }) {
   );
 }
 
-export default function Navbar() {
+function NavbarInner() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [badgePop, setBadgePop] = useState(false);
   const cartCount = useCartStore(selectCartCount);
   const hasHydrated = useCartStore((s) => s._hasHydrated);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const prevCount = useRef(cartCount);
+  const activeGender = pathname === "/" ? (searchParams.get("gender") ?? "").toLowerCase() : "";
 
   useEffect(() => {
     if (searchOpen) {
@@ -87,6 +92,19 @@ export default function Navbar() {
       return () => clearTimeout(t);
     }
   }, [searchOpen]);
+
+  useEffect(() => {
+    if (!hasHydrated) {
+      prevCount.current = cartCount;
+      return;
+    }
+    if (cartCount !== prevCount.current) {
+      prevCount.current = cartCount;
+      setBadgePop(true);
+      const t = setTimeout(() => setBadgePop(false), 380);
+      return () => clearTimeout(t);
+    }
+  }, [cartCount, hasHydrated]);
 
   function onSubmitSearch(e: FormEvent) {
     e.preventDefault();
@@ -121,7 +139,9 @@ export default function Navbar() {
               <li key={cat}>
                 <Link
                   href={genderHref[cat]}
-                  className="text-sm font-semibold tracking-widest transition-colors hover:text-neutral-500 text-neutral-900"
+                  className={`nav-link text-xs font-semibold tracking-[0.22em] transition-colors hover:text-neutral-500 text-neutral-900 ${
+                    activeGender === cat.toLowerCase() ? "nav-link-active" : ""
+                  }`}
                 >
                   {cat}
                 </Link>
@@ -141,7 +161,7 @@ export default function Navbar() {
               </button>
 
               {searchOpen && (
-                <div className="absolute right-0 top-10 w-[min(320px,calc(100vw-2rem))] border border-neutral-200 bg-white shadow-lg p-3">
+                <div className="animate-panel-in absolute right-0 top-10 z-20 w-[min(320px,calc(100vw-2rem))] border border-neutral-200 bg-white shadow-lg p-3">
                   <form onSubmit={onSubmitSearch} className="flex items-center gap-2">
                     <input
                       ref={searchInputRef}
@@ -173,12 +193,16 @@ export default function Navbar() {
 
             <Link
               href="/cart"
-              aria-label={`Cart (${cartCount} items)`}
+              aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`}
               className="relative text-neutral-700 hover:text-neutral-900 transition-colors"
             >
               <CartIcon />
               {hasHydrated && cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-900 text-white text-[10px] font-bold leading-none">
+                <span
+                  className={`absolute -top-1.5 -right-1.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-neutral-900 text-white text-[10px] font-bold leading-none ${
+                    badgePop ? "animate-badge-pop" : ""
+                  }`}
+                >
                   {cartCount > 99 ? "99+" : cartCount}
                 </span>
               )}
@@ -197,7 +221,7 @@ export default function Navbar() {
 
         {/* Mobile dropdown menu */}
         {menuOpen && (
-          <div className="lg:hidden border-t border-neutral-100 py-3">
+          <div className="animate-panel-in lg:hidden border-t border-neutral-100 py-3">
             <ul className="flex flex-col">
               {categories.map((cat) => (
                 <li key={cat}>
@@ -215,5 +239,17 @@ export default function Navbar() {
         )}
       </nav>
     </header>
+  );
+}
+
+export default function Navbar() {
+  return (
+    <Suspense
+      fallback={
+        <header className="sticky top-0 z-50 h-16 bg-white border-b border-neutral-200" />
+      }
+    >
+      <NavbarInner />
+    </Suspense>
   );
 }

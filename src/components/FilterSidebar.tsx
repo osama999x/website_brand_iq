@@ -262,12 +262,12 @@ export default function FilterSidebar({
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            className="animate-fade fixed inset-0 bg-black/40 z-40 lg:hidden"
             onClick={onClose}
             aria-hidden="true"
           />
           {/* Drawer */}
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-white px-5 py-6 overflow-y-auto lg:hidden shadow-xl">
+          <aside className="animate-drawer fixed inset-y-0 left-0 z-50 w-72 bg-white px-5 py-6 overflow-y-auto lg:hidden shadow-xl">
             {sidebarContent}
           </aside>
         </>

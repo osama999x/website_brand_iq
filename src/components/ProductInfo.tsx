@@ -7,7 +7,7 @@ import { useCartStore } from "../store/cartStore";
 import { useWishlistStore } from "../store/wishlistStore";
 import { lookupSkuForSize, lookupPriceForSize } from "../lib/productVariantMaps";
 import { formatMoney, getPriceRange, getUnitPrice } from "../lib/pricing";
-import { resolveOrderSize, shouldShowSizeUi } from "../lib/shopGender";
+import { isCosmeticsProduct, resolveOrderSize, shouldShowSizeUi } from "../lib/shopGender";
 import Link from "next/link";
 import RichTextContent from "./RichTextContent";
 
@@ -31,13 +31,23 @@ function AccordionItem({
         className="flex w-full items-center justify-between py-4 text-left cursor-pointer"
       >
         <span className="text-sm font-semibold text-neutral-900 tracking-wide">{title}</span>
-        <span className="text-neutral-500 text-lg leading-none select-none">
-          {open ? "−" : "+"}
+        <span
+          className={`text-neutral-500 text-lg leading-none select-none transition-transform duration-300 ${
+            open ? "rotate-45" : ""
+          }`}
+        >
+          +
         </span>
       </button>
-      {open && (
-        <div className="pb-4 text-sm text-neutral-600 leading-relaxed">{children}</div>
-      )}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden" inert={open ? undefined : true}>
+          <div className="pb-4 text-sm text-neutral-600 leading-relaxed">{children}</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -113,6 +123,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
   const router = useRouter();
 
   const showSizeUi = shouldShowSizeUi({ category: { gender: categoryGender, name: category }, categoryGender });
+  const beauty =
+    gender === "Cosmetics" ||
+    isCosmeticsProduct({ category, categoryGender });
   const needsSize = showSizeUi && sizes.length > 0;
   const hasColors = (colors?.length ?? 0) > 0;
   const isColorAndSize = hasColors && needsSize;
@@ -277,13 +290,13 @@ export default function ProductInfo({ product }: ProductInfoProps) {
       </div>
 
       {/* Product name */}
-      <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900 leading-tight">
+      <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900 leading-none">
         {name}
       </h1>
 
       {/* Fit & gender */}
       <p className="mt-1.5 text-sm text-neutral-500">
-        {fit} | {gender}
+        {beauty ? category || "Beauty" : `${fit} | ${gender}`}
       </p>
 
       {/* Price */}
@@ -319,7 +332,7 @@ export default function ProductInfo({ product }: ProductInfoProps) {
         <div className="mb-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold tracking-[0.15em] uppercase text-neutral-900">
-              Select Color
+              {beauty ? "Select Shade" : "Select Color"}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -424,7 +437,9 @@ export default function ProductInfo({ product }: ProductInfoProps) {
               : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-900 hover:text-neutral-900"
           }`}
         >
-          <HeartIcon filled={isLiked} />
+          <span className={isLiked ? "animate-heart" : ""}>
+            <HeartIcon filled={isLiked} />
+          </span>
         </button>
       </div>
 

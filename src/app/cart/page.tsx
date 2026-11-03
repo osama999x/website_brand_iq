@@ -50,7 +50,7 @@ export default function CartPage() {
 
         {/* Page title */}
         <div className="mb-8 flex items-baseline gap-3">
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+          <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900">
             Your Cart
           </h1>
           {cartCount > 0 && (

@@ -77,7 +77,7 @@ export default function TrackOrderPage() {
           </ol>
         </nav>
 
-        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900 mb-3">
+        <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900 mb-3 leading-none">
           Track Order
         </h1>
         <p className="text-sm text-neutral-500 mb-8">

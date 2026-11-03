@@ -10,6 +10,7 @@ import { getProductDetail, getRelatedProductsMapped } from "../../../services/ho
 import type { Product } from "../../../data/products";
 import { mapApiProductDetailToProduct } from "../../../types/api";
 import { stripHtml } from "../../../lib/sanitizeHtml";
+import { isCosmeticsProduct } from "../../../lib/shopGender";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +108,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
         {/* Product layout: gallery (left) + info (right) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-14 pb-16 lg:pb-24">
           {/* Left — Image gallery */}
-          <ProductGallery images={product.images} productName={product.name} />
+          <ProductGallery
+            images={product.images}
+            productName={product.name}
+            presentation={
+              product.gender === "Cosmetics" ||
+              isCosmeticsProduct({ category: product.category, categoryGender: product.categoryGender })
+                ? "beauty"
+                : "apparel"
+            }
+          />
 
           {/* Right — Product info */}
           <div className="lg:py-2">
@@ -123,7 +133,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-neutral-500 mb-1.5">
                   Explore more
                 </p>
-                <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+                <h2 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900">
                   You May Also Like
                 </h2>
               </div>
@@ -136,8 +146,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-10">
-              {relatedProducts.map((p) => (
-                <ProductCard key={`${p.id}-${p.slug}`} product={p} />
+              {relatedProducts.map((p, index) => (
+                <ProductCard key={`${p.id}-${p.slug}`} product={p} index={index} />
               ))}
             </div>
           </section>

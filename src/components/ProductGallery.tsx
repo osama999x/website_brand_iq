@@ -7,10 +7,14 @@ import { PLACEHOLDER_PRODUCT_IMAGE, resolveProductImageUrl } from "../lib/assets
 interface ProductGalleryProps {
   images: string[];
   productName: string;
+  /** Apparel turns like a lookbook page. Beauty turns further, like a bottle or compact. */
+  presentation?: "apparel" | "beauty";
 }
 
-export default function ProductGallery({ images, productName }: ProductGalleryProps) {
+export default function ProductGallery({ images, productName, presentation = "apparel" }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [turn, setTurn] = useState<"next" | "prev">("next");
+  const beauty = presentation === "beauty";
 
   const resolvedImages = useMemo(() => {
     const list = images.map((src) => resolveProductImageUrl(src));
@@ -23,14 +27,21 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
   return (
     <div className="flex flex-col gap-3 lg:sticky lg:top-24">
       {/* Main image */}
-      <div className="product-media-frame relative w-full aspect-[3/4] max-h-[min(90vh,800px)]">
+      <div
+        className={`product-media-frame relative w-full max-h-[min(90vh,800px)] ${
+          beauty ? "aspect-[4/5] bg-[#f4efe9]" : "aspect-[3/4]"
+        }`}
+        style={{ perspective: "1000px" }}
+      >
         <ProductMedia
-          key={safeIndex}
+          key={`${safeIndex}-${turn}`}
           src={resolvedImages[safeIndex]}
           alt={`${productName} — view ${safeIndex + 1}`}
           priority
           fit="cover"
-          className="transition-opacity duration-300"
+          className={`media-turn-3d${beauty ? " media-turn-3d--beauty" : ""}${
+            turn === "prev" ? " media-turn-3d--prev" : ""
+          }`}
         />
       </div>
 
@@ -40,9 +51,14 @@ export default function ProductGallery({ images, productName }: ProductGalleryPr
           {resolvedImages.map((src, i) => (
             <button
               key={i}
-              onClick={() => setActiveIndex(i)}
+              onClick={() => {
+                setTurn(i < safeIndex ? "prev" : "next");
+                setActiveIndex(i);
+              }}
               aria-label={`View image ${i + 1}`}
-              className={`product-media-frame relative aspect-[3/4] cursor-pointer transition-all duration-200 ${
+              className={`product-media-frame relative cursor-pointer transition-all duration-200 ${
+                beauty ? "aspect-[4/5] bg-[#f4efe9]" : "aspect-[3/4]"
+              } ${
                 i === safeIndex
                   ? "ring-2 ring-neutral-900 ring-offset-1"
                   : "ring-1 ring-neutral-200 hover:ring-neutral-400"

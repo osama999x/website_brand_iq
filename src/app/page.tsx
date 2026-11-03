@@ -1,11 +1,26 @@
 import Navbar from "../components/Navbar";
 import HeroSection from "../components/HeroSection";
+import ShopDepartments from "../components/ShopDepartments";
 import ProductGrid from "../components/ProductGrid";
 import Footer from "../components/Footer";
 import { getHome } from "../services/homeService";
 import { mapApiProductsToProducts } from "../types/api";
 import type { ApiHero } from "../types/api";
 import { parseShopGender, toProductGenderLabel, type ProductGenderLabel } from "../lib/shopGender";
+
+function pickHero(list: ApiHero[], shop?: ReturnType<typeof parseShopGender>) {
+  const active = list
+    .filter((h) => h && (h.isActive == null || h.isActive === true))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const genderOf = (h: ApiHero) => (h.gender ?? "").toLowerCase();
+  if (shop) {
+    const match = active.find((h) => genderOf(h) === shop);
+    if (match) return match;
+    if (shop === "cosmetics") return undefined;
+    return active.find((h) => genderOf(h) !== "cosmetics") ?? active[0];
+  }
+  return active.find((h) => !genderOf(h) || genderOf(h) === "unisex") ?? active.find((h) => genderOf(h) !== "cosmetics") ?? active[0];
+}
 
 /** Always refetch catalog — do not serve a cached home product grid with old prices. */
 export const dynamic = "force-dynamic";
@@ -35,10 +50,7 @@ export default async function Home({ searchParams }: PageProps) {
 
     const heroRaw = data.hero;
     const heroList = Array.isArray(heroRaw) ? heroRaw : heroRaw ? [heroRaw] : [];
-    const activeSorted = heroList
-      .filter((h) => h && (h.isActive == null || h.isActive === true))
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    hero = activeSorted[0];
+    hero = pickHero(heroList, activeGender);
 
     const apiProducts =
       (data.featuredProducts?.length ? data.featuredProducts : null) ??
@@ -77,7 +89,8 @@ export default async function Home({ searchParams }: PageProps) {
     <main>
       <Navbar />
       <HeroSection
-        campaign={campaign}
+        shop={activeGender}
+        campaign={activeGender === "cosmetics" ? undefined : campaign}
         hero={
           hero
             ? {
@@ -92,6 +105,7 @@ export default async function Home({ searchParams }: PageProps) {
             : undefined
         }
       />
+      <ShopDepartments active={activeGender} />
       {loadError && activeGender ? (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <p className="text-sm text-red-700 border border-red-200 bg-red-50 px-4 py-3">
@@ -103,6 +117,7 @@ export default async function Home({ searchParams }: PageProps) {
         </div>
       ) : null}
       <ProductGrid
+        shop={activeGender}
         products={featuredProducts}
         emptyMessage={
           loadError && activeGender

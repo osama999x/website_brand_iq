@@ -66,7 +66,7 @@ export default function AdminFeedbackPage() {
 
         <div className="flex items-end justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+            <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900 leading-none">
               Feedback
             </h1>
             <p className="mt-1 text-sm text-neutral-500">

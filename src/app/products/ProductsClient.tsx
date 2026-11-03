@@ -118,8 +118,12 @@ export default function ProductsClient({ gender }: { gender?: string }) {
 
   const pageTitle = useMemo(() => {
     if (keyword) return `Search results for “${keyword}”`;
+    if (selectedGender === "cosmetics") return "Cosmetics";
+    if (selectedGender === "men") return "Men";
+    if (selectedGender === "women") return "Women";
+    if (selectedGender === "juniors") return "Juniors";
     return "All Products";
-  }, [keyword]);
+  }, [keyword, selectedGender]);
 
   useEffect(() => {
     let cancelled = false;
@@ -234,16 +238,24 @@ export default function ProductsClient({ gender }: { gender?: string }) {
               </Link>
             </li>
             <li aria-hidden="true">/</li>
-            <li className="text-neutral-900 font-medium">All Products</li>
+            <li className="text-neutral-900 font-medium">{pageTitle}</li>
           </ol>
         </nav>
 
         {/* Page title */}
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-neutral-900">
+          <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight text-neutral-900">
             {pageTitle}
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">{total} items</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            {selectedGender === "cosmetics"
+              ? "Color, care, and finish"
+              : selectedGender
+                ? "Denim, tailoring, and everyday pieces"
+                : "Clothing and cosmetics"}
+            {" · "}
+            {total} items
+          </p>
         </div>
 
         {/* Layout: sidebar + content */}
@@ -354,8 +366,8 @@ export default function ProductsClient({ gender }: { gender?: string }) {
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
-                {products.map((product) => (
-                  <ProductCard key={`${product.id}-${product.slug}`} product={product} />
+                {products.map((product, index) => (
+                  <ProductCard key={`${product.id}-${product.slug}`} product={product} index={index} />
                 ))}
               </div>
             )}
